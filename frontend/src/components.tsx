@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { X, Check, Search } from 'lucide-react'
 import type { Tag } from './api'
 
-export function Modal({ title, subtitle, children, onClose, wide = false, className = '' }: { title: string; subtitle?: string; children: ReactNode; onClose: () => void; wide?: boolean; className?: string }) {
+export function Modal({ title, subtitle, children, onClose, wide = false, fullPage = false, headerActions, className = '' }: { title: string; subtitle?: string; children: ReactNode; onClose: () => void; wide?: boolean; fullPage?: boolean; headerActions?: ReactNode; className?: string }) {
   const container = useRef<HTMLDivElement>(null)
   const close = useRef(onClose)
   close.current = onClose
@@ -25,9 +25,9 @@ export function Modal({ title, subtitle, children, onClose, wide = false, classN
     document.addEventListener('keydown', handle)
     return () => { document.removeEventListener('keydown', handle); document.body.style.overflow = original; previous?.focus() }
   }, [])
-  return <div className="modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
+  return <div className={`modal-backdrop ${fullPage ? 'full-page-backdrop' : ''}`} onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
     <div className={`modal ${wide ? 'wide' : ''} ${className}`} role="dialog" aria-modal="true" aria-label={title} ref={container} tabIndex={-1}>
-      <header className="modal-header"><div><h2>{title}</h2>{subtitle && <p>{subtitle}</p>}</div><button className="icon-button" onClick={onClose} aria-label="关闭窗口"><X size={20} /></button></header>
+      <header className="modal-header"><div className="modal-title-block"><h2 title={title}>{title}</h2>{subtitle && <p>{subtitle}</p>}</div><span className="modal-header-actions">{headerActions}<button className="icon-button" onClick={onClose} aria-label="关闭窗口"><X size={20} /></button></span></header>
       {children}
     </div>
   </div>

@@ -1,16 +1,27 @@
 import { forwardRef, lazy, Suspense, useEffect, useImperativeHandle, useRef, useState, type FormEvent } from 'react'
-import { Download, ExternalLink, FileText, Save, CalendarDays, BookOpen, Sparkles } from 'lucide-react'
+import { Download, ExternalLink, FileText, Save, CalendarDays, BookOpen, Sparkles, Maximize2, Minimize2 } from 'lucide-react'
 import { readingApi, ApiError, dateText, sizeText, statusNames, kindNames, type Kind, type Paper, type Tag, type ReadingStatus } from './api'
 import { Modal, LabelPicker, Confirm } from './components'
 import type { ReaderHandle } from './reader/types'
 import MetadataAssist, { type MetadataResult } from './ai/MetadataAssist'
+import './ReaderLayout.css'
 const ReaderWorkspace = lazy(() => import('./reader/ReaderWorkspace'))
 const CardPanel = lazy(() => import('./ai/CardPanel'))
 export interface DetailHandle { requestClose: (after?: () => void) => void }
 interface PendingLabel { name: string; kind: Kind; reason: string; selected: boolean }
+const readingLayoutKey = 'paperboard-reader-layout'
 
 export default forwardRef<DetailHandle, { paper: Paper; tags: Tag[]; preview: boolean; initialTab?: 'info' | 'preview' | 'card'; enabled: boolean; onClose: () => void; onSaved: (paper: Paper) => void; onRead: () => void; onOpened: () => void; onModelSettings: () => void }>(function PaperDetail({ paper, tags, preview, initialTab, enabled, onClose, onSaved, onRead, onOpened, onModelSettings }, ref) {
   const [tab, setTab] = useState(initialTab || (preview ? 'preview' : 'info'))
+  const [fullPage, setFullPage] = useState(() => {
+    try { return localStorage.getItem(readingLayoutKey) === 'full-page' } catch { return false }
+  })
+  function toggleReadingLayout() {
+    const next = !fullPage
+    setFullPage(next)
+    // 存储不可用时仍可切换当前页面的布局。
+    try { localStorage.setItem(readingLayoutKey, next ? 'full-page' : 'window') } catch {}
+  }
   const [title, setTitle] = useState(paper.title)
   const [authors, setAuthors] = useState(paper.authors.join('；'))
   const [year, setYear] = useState(paper.year?.toString() || '')
@@ -129,9 +140,9 @@ export default forwardRef<DetailHandle, { paper: Paper; tags: Tag[]; preview: bo
     const total = directions.length+general.length+pendingLabels.filter(label=>label.kind!=='topic' && label.selected).length
     return <div className="metadata-new-labels">{pendingLabels.map((label,index)=>label.kind===kind && <div key={`${kind}-${index}`}><label><input type="checkbox" checked={label.selected} disabled={!label.selected && (existingCount+pendingCount>=(kind==='general'?20:10) || (kind!=='topic' && total>=20))} onChange={event=>setPendingLabels(previous=>previous.map((value,i)=>i===index?{...value,selected:event.target.checked}:value))} /><span>新建{kindNames[kind]}：{label.name}<small>{label.reason} · 保存信息时创建</small></span></label><input aria-label={`待新建${kindNames[kind]}名称 ${index+1}`} value={label.name} maxLength={kind==='topic'?50:30} onChange={event=>setPendingLabels(previous=>previous.map((value,i)=>i===index?{...value,name:event.target.value}:value))} /></div>)}</div>
   }
-  return <><Modal title={paper.deleted_at ? '回收站中的论文' : tab === 'preview' ? paper.title : '论文详情'} subtitle={`${paper.page_count} 页 · ${sizeText(paper.file_size)} · ${dateText(paper.created_at)} 加入`} wide className={tab === 'preview' ? 'reader-modal' : ''} onClose={() => void requestClose()}>
+  return <><Modal title={paper.deleted_at ? '回收站中的论文' : tab === 'preview' ? paper.title : '论文详情'} subtitle={`${paper.page_count} 页 · ${sizeText(paper.file_size)} · ${dateText(paper.created_at)} 加入`} wide fullPage={tab === 'preview' && fullPage} className={tab === 'preview' ? `reader-modal ${fullPage ? 'reader-full-page' : ''}` : ''} headerActions={tab === 'preview' && <button type="button" className="button compact secondary reader-mode-button" aria-pressed={fullPage} title={fullPage ? '返回小窗阅读，并记住此选择' : '使用全页面阅读，并记住此选择'} onClick={toggleReadingLayout}>{fullPage ? <Minimize2 size={15} /> : <Maximize2 size={15} />}{fullPage ? '返回小窗' : '全页面阅读'}</button>} onClose={() => void requestClose()}>
     <div className="detail-tabs"><button className={tab === 'info' ? 'active' : ''} onClick={() => setTab('info')}><FileText size={16} />论文信息</button><button className={tab === 'preview' ? 'active' : ''} onClick={() => { setTab('preview'); setReaderStarted(true); if (!paper.deleted_at) onRead() }}><BookOpen size={16} />阅读与记录</button><button className={tab==='card'?'active':''} onClick={()=>{setTab('card');setCardStarted(true)}}><Sparkles size={16} />简介卡片</button><a className="button compact secondary" href={`/api/v1/papers/${paper.id}/file?download=true`}><Download size={14} />下载原文</a></div>
-    {readerStarted && <div style={{ display: tab === 'preview' ? undefined : 'none' }}><Suspense fallback={<div className="pdf-loading">正在准备阅读器…</div>}><ReaderWorkspace ref={reader} paper={paper} enabled={enabled} onOpened={onOpened} openAt={openAt} /></Suspense></div>}
+    {readerStarted && <div className="paper-reader-holder" style={{ display: tab === 'preview' ? undefined : 'none' }}><Suspense fallback={<div className="pdf-loading">正在准备阅读器…</div>}><ReaderWorkspace ref={reader} paper={paper} enabled={enabled} onOpened={onOpened} openAt={openAt} /></Suspense></div>}
     {cardStarted && <div style={{display:tab==='card'?undefined:'none'}}><Suspense fallback={<div className="pdf-loading">正在加载简介卡片…</div>}><CardPanel ref={card} paper={paper} enabled={enabled} active={tab==='card'} onChanged={onOpened} onPaperChanged={onSaved} onSettings={onModelSettings} onGo={page=>{setOpenAt({page,nonce:Date.now()});setTab('preview');setReaderStarted(true);if(!paper.deleted_at)onRead()}} /></Suspense></div>}
     <form onSubmit={save} style={{ display: tab === 'info' ? undefined : 'none' }}>
       <MetadataAssist paperId={paper.id} active={tab==='info'} enabled={enabled} readOnly={!!paper.deleted_at || busy} onStart={()=>{metadataStart.current=structuredClone(currentInfo.current)}} onFill={fillMetadata} onSettings={onModelSettings} onGo={page=>{setOpenAt({page,nonce:Date.now()});setTab('preview');setReaderStarted(true);if(!paper.deleted_at)onRead()}} />

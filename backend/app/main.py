@@ -97,7 +97,7 @@ def create_app(settings=None):
             await task
         engine.dispose()
 
-    app = FastAPI(title="研读 · 论文看板", version="0.3.3", lifespan=lifespan, docs_url=None, redoc_url=None)
+    app = FastAPI(title="研读 · 论文看板", version="0.3.4", lifespan=lifespan, docs_url=None, redoc_url=None)
     app.state.card_runner = card_runner
     app.state.settings = settings
     app.state.session_factory = factory
@@ -178,7 +178,7 @@ def create_app(settings=None):
 
     @app.get("/api/v1/health")
     def health():
-        return {"status": "ok", "stage": "cards", "version": "0.3.3"}
+        return {"status": "ok", "stage": "cards", "version": "0.3.4"}
 
     @app.get("/api/v1/status")
     def status(request: Request, db=Depends(database)):

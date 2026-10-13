@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
-import { MoreHorizontal, FileText, Sparkles, Download, RefreshCw } from 'lucide-react'
+import { MoreHorizontal, FileText, Sparkles, Download, RefreshCw, MessageSquare } from 'lucide-react'
 import type { Paper } from '../api'
 
-export default function ReaderOptionsMenu({ paper, onInfo, onCard, onReload }: { paper: Paper; onInfo: () => void; onCard: () => void; onReload: () => void }) {
+export default function ReaderOptionsMenu({ paper, onInfo, onCard, onReload, onDiscussion }: { paper: Paper; onInfo: () => void; onCard: () => void; onReload: () => void; onDiscussion?: () => void }) {
   const menu = useRef<HTMLDetailsElement>(null)
   function choose(action: () => void) { if (menu.current) menu.current.open = false; action() }
   useEffect(() => {
@@ -19,6 +19,7 @@ export default function ReaderOptionsMenu({ paper, onInfo, onCard, onReload }: {
     <div className="reader-options-popover"><p title={paper.title}>{paper.title}<small>PDF · {paper.page_count} 页</small></p>
       <button type="button" onClick={() => choose(onInfo)}><FileText size={14} />论文信息</button>
       <button type="button" onClick={() => choose(onCard)}><Sparkles size={14} />简介卡片</button>
+      {onDiscussion && <button type="button" onClick={() => choose(onDiscussion)}><MessageSquare size={14} />论文讨论</button>}
       <a href={`/api/v1/papers/${paper.id}/file?download=true`} onClick={() => { if (menu.current) menu.current.open = false }}><Download size={14} />下载原文</a>
       <button type="button" onClick={() => choose(onReload)}><RefreshCw size={14} />重新加载原文</button>
     </div>

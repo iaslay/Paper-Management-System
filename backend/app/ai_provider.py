@@ -140,7 +140,13 @@ class VisionProvider:
                 # 连接探针只需短 JSON，避免默认思考耗尽探针输出预算。
                 body["reasoning"] = {"effort": "none"}
             if schema and options["structured_output"]:
-                body["text"] = {"format": {"type": "json_schema", "name": "paperboard_card", "strict": True, "schema": strict_schema(schema)}}
+                if is_deepseek(options) and '"anyOf"' in json.dumps(schema):
+                    # DeepSeek 拒绝包含可空联合字段的结构，使用 JSON 模式后仍由服务端严格校验。
+                    body["text"] = {"format": {"type": "json_object"}}
+                    # 卡片需要完整 JSON，避免默认思考过程耗尽同一输出预算。
+                    body["reasoning"] = {"effort": "none"}
+                else:
+                    body["text"] = {"format": {"type": "json_schema", "name": "paperboard_card", "strict": True, "schema": strict_schema(schema)}}
             return "/responses", {"Authorization": "Bearer " + self.key}, body
         if options["provider"] == "claude":
             return "/messages", {"x-api-key": self.key, "anthropic-version": "2023-06-01"}, {"model": options["model"], "system": system, "messages": [{"role": "user", "content": content}], "max_tokens": limit}

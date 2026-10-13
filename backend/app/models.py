@@ -253,6 +253,38 @@ class ModelCall(Base):
     finished_at: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
 
 
+class DiscussionSession(Base):
+    __tablename__ = "discussion_sessions"
+    __table_args__ = (UniqueConstraint("workspace_id", "user_id", "request_id", name="uq_discussion_request"), Index("ix_discussion_paper", "paper_id", "user_id", "updated_at"))
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=lambda: uuid.uuid4().hex)
+    workspace_id: Mapped[int] = mapped_column(ForeignKey("workspaces.id"))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    paper_id: Mapped[str] = mapped_column(ForeignKey("papers.id", ondelete="CASCADE"))
+    file_hash: Mapped[str] = mapped_column(String(64))
+    request_id: Mapped[str] = mapped_column(String(32))
+    title: Mapped[str] = mapped_column(String(120), default="新讨论")
+    created_at: Mapped[int] = mapped_column(BigInteger, default=now)
+    updated_at: Mapped[int] = mapped_column(BigInteger, default=now)
+
+
+class DiscussionMessage(Base):
+    __tablename__ = "discussion_messages"
+    __table_args__ = (UniqueConstraint("session_id", "sequence", name="uq_discussion_message_order"), UniqueConstraint("task_id", "role", name="uq_discussion_task_role"))
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=lambda: uuid.uuid4().hex)
+    workspace_id: Mapped[int] = mapped_column(ForeignKey("workspaces.id"))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    paper_id: Mapped[str] = mapped_column(ForeignKey("papers.id", ondelete="CASCADE"))
+    session_id: Mapped[str] = mapped_column(ForeignKey("discussion_sessions.id", ondelete="CASCADE"))
+    task_id: Mapped[str | None] = mapped_column(ForeignKey("generation_tasks.id", ondelete="SET NULL"), nullable=True)
+    sequence: Mapped[int] = mapped_column(Integer)
+    role: Mapped[str] = mapped_column(String(12))
+    content: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(12), default="completed")
+    evidence: Mapped[list] = mapped_column(JSON, default=list)
+    context: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[int] = mapped_column(BigInteger, default=now)
+
+
 class CardVersion(Base):
     __tablename__ = "card_versions"
     __table_args__ = (UniqueConstraint("paper_id", "sequence", name="uq_card_version_sequence"),)

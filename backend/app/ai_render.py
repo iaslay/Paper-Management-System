@@ -7,6 +7,18 @@ from pypdf import PdfReader, PdfWriter
 
 
 def prepare(path, pages, mode, edge):
+    if mode == "text":
+        reader = PdfReader(path)
+        remaining, output, clipped, empty = edge, [], [], []
+        for number in pages:
+            text = (reader.pages[number - 1].extract_text() or "").strip()
+            if not text:
+                empty.append(number); continue
+            selected = text[:min(6000, remaining)]
+            if len(selected) < len(text): clipped.append(number)
+            if selected: output.append({"page_number": number, "text": selected}); remaining -= len(selected)
+        result = {"pages": sorted(output, key=lambda item: item["page_number"]), "clipped_pages": sorted(clipped), "empty_pages": sorted(empty)}
+        return [("text", json.dumps(result, ensure_ascii=False).encode("utf-8"), 0)]
     if mode == "pdf":
         reader, writer = PdfReader(path), PdfWriter()
         for number in pages:
@@ -38,7 +50,7 @@ if __name__ == "__main__":
     destination = Path(output_dir)
     manifest = []
     for index, (kind, data, local) in enumerate(prepare(path, json.loads(page_numbers), mode, int(edge))):
-        filename = f"input-{index}.{'pdf' if kind == 'pdf' else 'jpg'}"
+        filename = f"input-{index}.{'json' if kind == 'text' else 'pdf' if kind == 'pdf' else 'jpg'}"
         (destination / filename).write_bytes(data)
         manifest.append({"kind": kind, "filename": filename, "local_page": local})
     print(json.dumps(manifest))

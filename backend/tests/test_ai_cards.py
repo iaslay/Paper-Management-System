@@ -202,6 +202,22 @@ def test_deepseek_display_alias_does_not_change_other_services():
     assert normalize_options(options)["model"] == "DeepSeek-V4.1-Flash"
 
 
+def test_deepseek_nullable_card_uses_json_mode_and_keeps_local_validation():
+    options = ModelOptions(base_url="https://api.deepseek.com", model="deepseek-flash").model_dump()
+    provider = VisionProvider(options, "test-key")
+    body = provider.build("返回卡片 JSON", "中文论文助手", [], WireCard.model_json_schema())[2]
+    assert body["text"]["format"] == {"type": "json_object"}
+    assert body["reasoning"] == {"effort": "none"}
+    WireCard.model_validate(wire())
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        WireCard.model_validate({"summary": "不符合卡片结构"})
+    simple = {"type": "object", "properties": {"answer": {"type": "string"}}}
+    assert provider.build("回答 JSON", "助手", [], simple)[2]["text"]["format"]["type"] == "json_schema"
+    other = VisionProvider({**options, "base_url": "https://model.example.com"}, "test-key")
+    assert other.build("卡片 JSON", "助手", [], WireCard.model_json_schema())[2]["text"]["format"]["type"] == "json_schema"
+
+
 def test_endpoint_failure_shows_status_without_echoing_remote_secret(client):
     config = configure(client)
     mock_model(client,response_hook=lambda *args:httpx.Response(404,json={"error":{"message":"private-test-key-2026 敏感远端内容"}}))

@@ -1,4 +1,5 @@
 import type { PDFDocumentProxy } from 'pdfjs-dist'
+import type { SavePhase } from './saveQueue'
 
 export type Rect = [number, number, number, number]
 export type Color = 'yellow' | 'green' | 'blue' | 'pink'
@@ -15,8 +16,8 @@ export interface NoteSeed extends NoteValue { note_type: NoteType; annotation_id
 export interface SelectionValue { quote: string; rects: Rect[]; page_number: number; page_source_id: string }
 export interface AnnotationResult { annotation: Annotation; note: Note | null }
 export interface PageList<T> { items: T[]; total: number; page: number; page_size: number }
-export interface SaveControl { dirty: () => boolean; flush: () => Promise<boolean>; pause: () => void; text: () => string; subscribe: (listener: () => void) => () => void }
-export interface ReaderHandle { flush: () => Promise<boolean>; dirty: () => boolean; text: () => string; retry: () => void }
+export interface SaveControl { dirty: () => boolean; flush: () => Promise<boolean>; pause: () => void; text: () => string; subscribe: (listener: () => void) => () => void; status?: () => { phase: SavePhase; error: Error | null } }
+export interface ReaderHandle { flush: () => Promise<boolean>; dirty: () => boolean; text: () => string; retry: () => void; reload?: () => void }
 export type RegisterSave = (key: string, control: SaveControl) => () => void
 export interface ReaderDocument { pdf: PDFDocumentProxy; generation: number }
 export const colors: Record<Color, string> = { yellow: '黄色', green: '绿色', blue: '蓝色', pink: '粉色' }

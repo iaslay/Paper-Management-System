@@ -14,7 +14,7 @@ export function Modal({ title, subtitle, children, onClose, wide = false, fullPa
       if (dialogs[dialogs.length - 1] !== container.current || !container.current?.getClientRects().length) return
       if (event.key === 'Escape') close.current()
       if (event.key !== 'Tab') return
-      const nodes = container.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), a[href], [tabindex="0"]')
+      const nodes = Array.from(container.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), a[href], summary, [tabindex="0"]') || []).filter(node => node.getClientRects().length > 0)
       if (!nodes?.length) { event.preventDefault(); return }
       const first = nodes[0], last = nodes[nodes.length - 1]
       if (event.shiftKey && (document.activeElement === first || document.activeElement === container.current)) { event.preventDefault(); last.focus() }

@@ -63,6 +63,7 @@ it('记住阅读布局，重开其他论文沿用选择，切到信息页仍可�
   first.unmount()
   const second=render(readingView(vi.fn(),{...paper,id:'b'.repeat(32),title:'另一篇论文'}))
   expect(second.getByRole('button',{name:'返回小窗'})).toBeTruthy()
+  fireEvent.click(second.getByLabelText('更多阅读操作'))
   fireEvent.click(second.getByRole('button',{name:'论文信息'}))
   expect(second.queryByRole('button',{name:'返回小窗'})).toBeNull()
   expect(second.getByRole('dialog',{name:'论文详情'}).classList.contains('reader-full-page')).toBe(false)

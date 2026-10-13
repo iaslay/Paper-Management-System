@@ -1,0 +1,146 @@
+{
+  "baseline": {
+    "body": {
+      "height": 405,
+      "width": 1181,
+      "x": 42,
+      "y": 228.890625
+    },
+    "lines": [
+      {
+        "height": 21.515625,
+        "text": "Research method and evaluation",
+        "width": 315.6393127441406,
+        "x": 148.90625,
+        "y": 362.15625
+      },
+      {
+        "height": 21.515625,
+        "text": "Retrieval augmented generation",
+        "width": 306.0805358886719,
+        "x": 148.90625,
+        "y": 405.28125
+      },
+      {
+        "height": 21.515625,
+        "text": "Compare experimental conditions.",
+        "width": 326.3544006347656,
+        "x": 148.90625,
+        "y": 448.296875
+      },
+      {
+        "height": 21.515625,
+        "text": "Read and record a research question.",
+        "width": 361.0797424316406,
+        "x": 148.90625,
+        "y": 491.3125
+      },
+      {
+        "height": 21.515625,
+        "text": "Select multiple lines without moving the page.",
+        "width": 435.172607421875,
+        "x": 148.90625,
+        "y": 534.328125
+      }
+    ],
+    "origin": 16,
+    "sheet": {
+      "height": 1132.09375,
+      "width": 800,
+      "x": 75,
+      "y": 244.890625
+    }
+  },
+  "result": {
+    "actionsPosition": "absolute",
+    "body": {
+      "height": 405,
+      "width": 1181,
+      "x": 42,
+      "y": 228.890625
+    },
+    "origin": 16,
+    "pageOverflow": false,
+    "quote": "Research method and evaluation\nRetrieval augmented generation\nCompare experimental",
+    "selection": "Research method and evaluation\nRetrieval augmented generation\nCompare experimental ",
+    "sheet": {
+      "height": 1132.09375,
+      "width": 800,
+      "x": 75,
+      "y": 244.890625
+    }
+  },
+  "repeatedDrags": [
+    {
+      "quote": "Research method and evaluationRetrieval augmented generationCompare experimental",
+      "rects": 6,
+      "selected": "Research method and evaluation\nRetrieval augmented generation\nCompare experimental ",
+      "sheet": {
+        "height": 1132.09375,
+        "width": 800,
+        "x": 75,
+        "y": 244.890625
+      }
+    },
+    {
+      "quote": "Research method and evaluationRetrieval augmented generationCompare experimental",
+      "rects": 6,
+      "selected": "Research method and evaluation\nRetrieval augmented generation\nCompare experimental ",
+      "sheet": {
+        "height": 1132.09375,
+        "width": 800,
+        "x": 75,
+        "y": 240.890625
+      }
+    },
+    {
+      "quote": "Research method and evaluationRetrieval augmented generationCompare experimental",
+      "rects": 6,
+      "selected": "Research method and evaluation\nRetrieval augmented generation\nCompare experimental ",
+      "sheet": {
+        "height": 1132.09375,
+        "width": 800,
+        "x": 75,
+        "y": 240.890625
+      }
+    },
+    {
+      "quote": "Research method and evaluationRetrieval augmented generationCompare experimental",
+      "rects": 6,
+      "selected": "Research method and evaluation\nRetrieval augmented generation\nCompare experimental ",
+      "sheet": {
+        "height": 1132.09375,
+        "width": 800,
+        "x": 75,
+        "y": 240.890625
+      }
+    }
+  ],
+  "narrow": {
+    "actions": {
+      "height": 99.578125,
+      "width": 320,
+      "x": 35,
+      "y": 597.390625
+    },
+    "overflow": false,
+    "quote": "method",
+    "viewport": {
+      "height": 844,
+      "width": 390
+    }
+  },
+  "realPaper": {
+    "quote": "Inside Out: Evolving User-Centric Core Memory Trees\nfor Long-Term Personalized Dialogue",
+    "selected": "Inside Out: Evolving User-Centric Core Memory Trees\nfor Long-Term Personalized Dialogue "
+  },
+  "rotated": {
+    "degrees": 90,
+    "selected": "Research method and evaluation\nRetrieval augmented generation\nCompare experiment"
+  },
+  "date": "2026-10-12",
+  "tests": {
+    "frontend": 44,
+    "build": "通过"
+  }
+}

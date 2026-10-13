@@ -1,0 +1,214 @@
+{
+  "日期": "2026-10-12",
+  "坐标边界核验": [
+    {
+      "edgeError": 0.109375,
+      "rotation": "90",
+      "zoom": "0.5"
+    },
+    {
+      "edgeError": 0.5,
+      "rotation": "180",
+      "zoom": "0.5"
+    },
+    {
+      "edgeError": 0.5,
+      "rotation": "270",
+      "zoom": "0.5"
+    },
+    {
+      "edgeError": 0.125,
+      "rotation": "0",
+      "zoom": "0.5"
+    },
+    {
+      "edgeError": 0.21875,
+      "rotation": "90",
+      "zoom": "1"
+    },
+    {
+      "edgeError": 0.21875,
+      "rotation": "180",
+      "zoom": "1"
+    },
+    {
+      "edgeError": 0.25,
+      "rotation": "270",
+      "zoom": "1"
+    },
+    {
+      "edgeError": 0.25,
+      "rotation": "0",
+      "zoom": "1"
+    },
+    {
+      "edgeError": 0.4375,
+      "rotation": "90",
+      "zoom": "2"
+    },
+    {
+      "edgeError": 0.4375,
+      "rotation": "180",
+      "zoom": "2"
+    },
+    {
+      "edgeError": 0.46875,
+      "rotation": "270",
+      "zoom": "2"
+    },
+    {
+      "edgeError": 0.46875,
+      "rotation": "0",
+      "zoom": "2"
+    },
+    {
+      "edgeError": 0.671875,
+      "rotation": "90",
+      "zoom": "3"
+    },
+    {
+      "edgeError": 0.671875,
+      "rotation": "180",
+      "zoom": "3"
+    },
+    {
+      "edgeError": 0.6875,
+      "rotation": "270",
+      "zoom": "3"
+    },
+    {
+      "edgeError": 0.6875,
+      "rotation": "0",
+      "zoom": "3"
+    }
+  ],
+  "连续开启核验": [
+    {
+      "canvases": 1,
+      "textLayers": 1
+    },
+    {
+      "canvases": 1,
+      "textLayers": 1
+    },
+    {
+      "canvases": 1,
+      "textLayers": 1
+    },
+    {
+      "canvases": 1,
+      "textLayers": 1
+    },
+    {
+      "canvases": 1,
+      "textLayers": 1
+    },
+    {
+      "canvases": 1,
+      "textLayers": 1
+    },
+    {
+      "canvases": 1,
+      "textLayers": 1
+    },
+    {
+      "canvases": 1,
+      "textLayers": 1
+    },
+    {
+      "canvases": 1,
+      "textLayers": 1
+    },
+    {
+      "canvases": 1,
+      "textLayers": 1
+    },
+    {
+      "canvases": 1,
+      "textLayers": 1
+    },
+    {
+      "canvases": 1,
+      "textLayers": 1
+    },
+    {
+      "canvases": 1,
+      "textLayers": 1
+    },
+    {
+      "canvases": 1,
+      "textLayers": 1
+    },
+    {
+      "canvases": 1,
+      "textLayers": 1
+    },
+    {
+      "canvases": 1,
+      "textLayers": 1
+    },
+    {
+      "canvases": 1,
+      "textLayers": 1
+    },
+    {
+      "canvases": 1,
+      "textLayers": 1
+    },
+    {
+      "canvases": 1,
+      "textLayers": 1
+    },
+    {
+      "canvases": 1,
+      "textLayers": 1
+    }
+  ],
+  "开启次数": 20,
+  "桌面尺寸": {
+    "width": 1280,
+    "height": 800
+  },
+  "窄屏尺寸": {
+    "width": 390,
+    "height": 844
+  },
+  "窄屏页面宽度": 390,
+  "关闭后阅读节点数": 0,
+  "其他样本读取": [
+    {
+      "title": "英文双栏校验",
+      "geometryNotice": false,
+      "page": "1",
+      "rotation": "0",
+      "textPresent": true
+    },
+    {
+      "title": "多行文本与连字校验",
+      "geometryNotice": false,
+      "page": "1",
+      "rotation": "0",
+      "textPresent": true
+    },
+    {
+      "title": "无目录阅读校验",
+      "geometryNotice": false,
+      "page": "1",
+      "rotation": "0",
+      "textPresent": true
+    },
+    {
+      "title": "旋转页与非零边界校验",
+      "geometryNotice": false,
+      "page": "2",
+      "rotation": "90",
+      "textPresent": true
+    }
+  ],
+  "真实论文读取": {
+    "页数": 18,
+    "文件大小": "13.7 MB",
+    "首页文字字符数": 4369,
+    "结果": "首页正常显示且没有页面错误"
+  }
+}

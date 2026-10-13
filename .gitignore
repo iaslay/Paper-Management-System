@@ -1,0 +1,14 @@
+.venv/
+.cache/
+node_modules/
+frontend/dist/
+frontend/public/pdfjs/
+frontend/public/version.json
+frontend/*.tsbuildinfo
+data/
+.pytest_cache/
+__pycache__/
+*.pyc
+.env
+.test-data/
+*.log

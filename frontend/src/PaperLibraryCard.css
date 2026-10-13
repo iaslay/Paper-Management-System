@@ -1,0 +1,42 @@
+.library-paper-card{display:flex;flex-direction:column;background:#fffefb}
+.library-paper-card .card-copy{padding:3px 16px 0}
+.library-paper-card .paper-title h3{font-size:14px;line-height:1.65;font-weight:600;min-height:0;margin-bottom:8px;-webkit-line-clamp:3}
+.library-paper-card .paper-title.has-preview h3{font-size:16px;color:#244e42;line-height:1.55;font-weight:650;-webkit-line-clamp:2}
+.paper-original-title{font-size:11px;color:#7c8975;line-height:1.6;margin:0 0 10px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
+.library-paper-card .paper-authors{font-size:10px;color:#85907f;line-height:1.5;margin:0 0 12px;gap:10px}
+.paper-author-names{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.paper-year{flex-shrink:0;color:#63725e}
+.library-paper-card .card-directions{min-height:0;margin-bottom:13px}
+.paper-insight{margin:0 12px 12px;padding:13px 13px 10px;border:1px solid #e5eadc;border-radius:8px;background:linear-gradient(145deg,#f7f9f1,#fbfcf7);min-width:0}
+.paper-insight-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:13px;font-size:10px;color:#73836a;letter-spacing:.04em}
+.paper-card-badge{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;padding:3px 6px;border-radius:4px;background:#f8f1df;color:#9a7e3c;font-size:9px;line-height:1.3;letter-spacing:0}
+.paper-card-badge.confirmed{background:#eaf0e2;color:#6a8254}
+.paper-insight-rows{margin:0;display:grid;gap:12px}
+.paper-insight-rows>div{min-width:0;display:grid;gap:4px}
+.paper-insight-rows dt{font-size:10px;line-height:1.4;font-weight:600;color:#89947e}
+.paper-insight-rows dd{font-size:12px;line-height:1.75;color:#40513e;margin:0;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;overflow-wrap:anywhere}
+.paper-insight-rows>div:last-child dd{color:#355b46}
+.paper-insight-summary{font-size:12px;line-height:1.8;margin:0;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden;color:#40513e}
+.paper-insight-actions{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:13px;padding-top:9px;border-top:1px solid #e6ebdd}
+.paper-insight-link{display:inline-flex;align-items:center;gap:5px;background:none;border:0;padding:2px 0;color:#476e52;font-size:11px;cursor:pointer;text-align:left}
+.paper-insight-link:hover{color:#214d3e;text-decoration:underline}
+.paper-insight-note{font-size:9px;color:#929d86}
+.preview-refresh{display:inline-flex;align-items:center;gap:4px;border:0;background:none;padding:2px 0;cursor:pointer;white-space:nowrap}
+.preview-refresh:hover{color:#476e52}.preview-refresh:disabled{cursor:default;opacity:.6}
+.preview-assist{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:9px}
+.preview-generate{display:inline-flex;align-items:center;gap:5px;font-size:10px;background:#fffefb;color:#607952;border:1px solid #dce5cf;border-radius:5px;padding:6px 8px;cursor:pointer}
+.preview-generate:disabled{opacity:.55;cursor:default}
+.preview-error{font-size:10px;line-height:1.6;color:#a0503e;margin-top:8px;overflow-wrap:anywhere}
+.preview-error .text-button{display:block;font-size:10px;margin-top:3px}
+.paper-insight-empty{color:#809074;font-size:11px;padding:15px 13px}
+.paper-insight-empty p{font-size:11px;line-height:1.8;color:#9aa58d;margin:6px 0 10px}
+.paper-secondary-labels{display:flex;flex-wrap:wrap;gap:5px 9px;padding:0 16px 12px;font-size:9px;color:#a0aa95}
+.paper-secondary-labels span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.library-paper-card .card-bottom{margin-top:auto}
+.library-paper-card.compact-card .card-copy{padding:3px 12px 0}
+.compact-card .paper-insight{margin:0 9px 10px;padding:11px 10px 8px}
+.compact-card .paper-insight-rows{gap:9px}
+.compact-card .paper-insight-rows dd{-webkit-line-clamp:2;font-size:11px}
+.library-paper-card.compact-card .paper-title.has-preview h3{font-size:14px}
+.library-paper-card button:focus-visible{outline:2px solid #739a60;outline-offset:3px}
+@media(max-width:450px){.library-paper-card .paper-title.has-preview h3{font-size:17px}.paper-insight-rows dd{font-size:13px;-webkit-line-clamp:4}.paper-insight{padding:14px}.paper-insight-rows{gap:13px}}

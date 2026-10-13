@@ -19,6 +19,10 @@ class Settings:
     ai_worker_enabled: bool = True
     allow_local_model: bool = False
     frontend_dir: Path | None = None
+    translation_enabled: bool = True
+    translation_base_url: str = "http://47.100.90.123:8008/v1"
+    translation_model: str = "Qwen/Qwen3.5-9B"
+    translation_timeout_seconds: int = 60
     allowed_origins: tuple[str, ...] = (
         "http://127.0.0.1:8000", "http://localhost:8000",
         "http://127.0.0.1:5173", "http://localhost:5173",
@@ -44,5 +48,9 @@ class Settings:
             ai_worker_enabled=os.getenv("PAPERBOARD_AI_WORKER", "1") == "1",
             allow_local_model=os.getenv("PAPERBOARD_ALLOW_LOCAL_MODEL", "0") == "1",
             frontend_dir=Path(os.environ["PAPERBOARD_FRONTEND_DIR"]) if os.getenv("PAPERBOARD_FRONTEND_DIR") else None,
+            translation_enabled=os.getenv("PAPERBOARD_TRANSLATION_ENABLED", "1") == "1",
+            translation_base_url=os.getenv("PAPERBOARD_TRANSLATION_BASE_URL", "http://47.100.90.123:8008/v1"),
+            translation_model=os.getenv("PAPERBOARD_TRANSLATION_MODEL", "Qwen/Qwen3.5-9B"),
+            translation_timeout_seconds=int(os.getenv("PAPERBOARD_TRANSLATION_TIMEOUT", "60")),
             **options,
         )

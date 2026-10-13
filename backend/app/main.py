@@ -38,6 +38,7 @@ from .ai_worker import CardRunner
 from .ai_schemas import TaskCreate
 from . import ai_service as ai
 from . import ai_metadata
+from .translation import TranslationService, build_translation_router
 
 COOKIE = "paperboard_session"
 PASSWORDS = PasswordHasher(time_cost=2, memory_cost=19456, parallelism=1)
@@ -49,6 +50,7 @@ def create_app(settings=None):
     engine, factory = connect_database(settings)
     write_lock = threading.RLock()
     card_runner = CardRunner(factory, write_lock, settings)
+    translation_service = TranslationService(settings)
 
     def cleanup():
         with write_lock, factory() as db:
@@ -95,10 +97,12 @@ def create_app(settings=None):
         task.cancel()
         with suppress(asyncio.CancelledError):
             await task
+        await translation_service.close()
         engine.dispose()
 
-    app = FastAPI(title="研读 · 论文看板", version="0.3.6", lifespan=lifespan, docs_url=None, redoc_url=None)
+    app = FastAPI(title="研读 · 论文看板", version="0.3.7", lifespan=lifespan, docs_url=None, redoc_url=None)
     app.state.card_runner = card_runner
+    app.state.translation_service = translation_service
     app.state.settings = settings
     app.state.session_factory = factory
     app.state.engine = engine
@@ -162,6 +166,7 @@ def create_app(settings=None):
 
     app.include_router(build_reading_router(database, require_user, write_lock, settings))
     app.include_router(build_ai_router(database, require_user, write_lock, settings, card_runner))
+    app.include_router(build_translation_router(database, require_user, translation_service))
 
     def user_view(db, user):
         workspace = db.get(Workspace, user.workspace_id)
@@ -178,7 +183,7 @@ def create_app(settings=None):
 
     @app.get("/api/v1/health")
     def health():
-        return {"status": "ok", "stage": "cards", "version": "0.3.6"}
+        return {"status": "ok", "stage": "cards", "version": "0.3.7"}
 
     @app.get("/api/v1/status")
     def status(request: Request, db=Depends(database)):

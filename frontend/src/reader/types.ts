@@ -13,7 +13,7 @@ export interface Annotation { id: string; paper_id: string; file_hash: string; p
 export interface Note { id: string; paper_id: string; file_hash: string; note_type: NoteType; content: string; page_number: number | null; annotation_id: string | null; insight_kind: InsightKind | null; revision: number; created_at: number; updated_at: number }
 export interface NoteValue { content: string; page_number: number | null; insight_kind: InsightKind | null }
 export interface NoteSeed extends NoteValue { note_type: NoteType; annotation_id: string | null }
-export interface SelectionValue { quote: string; rects: Rect[]; page_number: number; page_source_id: string }
+export interface SelectionValue { quote: string; rects: Rect[]; page_number: number; page_source_id: string | null }
 export interface AnnotationResult { annotation: Annotation; note: Note | null }
 export interface PageList<T> { items: T[]; total: number; page: number; page_size: number }
 export interface SaveControl { dirty: () => boolean; flush: () => Promise<boolean>; pause: () => void; text: () => string; subscribe: (listener: () => void) => () => void; status?: () => { phase: SavePhase; error: Error | null } }

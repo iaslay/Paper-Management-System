@@ -32,3 +32,15 @@
 .reader-page-placeholder{margin:0 auto;background:#fff;box-shadow:0 3px 16px #293c2925}
 .reader-page-notice{position:absolute;left:8px;right:8px;top:8px;z-index:3;max-width:500px;margin:0 auto;padding:6px 9px;background:#fff8e4e8;border-radius:4px;color:#796236;font-size:11px;line-height:1.6}
 .reader-rendered-page .reader-loading{min-height:0;background:#f7f8f3}
+.reader-translation{border-top:1px solid #dbe6ce;margin-top:10px;padding-top:9px}
+.reader-translation-heading,.reader-translation-wait,.reader-translation-result>div{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.reader-translation-heading small{font-size:9px;color:#829271;overflow-wrap:anywhere;text-align:right;max-width:240px}
+.reader-translation-wait{font-size:12px;color:#617a50;padding:12px 0 3px}
+.reader-translation .text-button{display:inline-flex;align-items:center;gap:4px;font-size:11px}
+.reader-translation-result{margin-top:9px;padding:10px;border:1px solid #d8e5c9;background:#fffefa;border-radius:5px}
+.reader-translation-result strong{font-size:11px;color:#5b7949}
+.reader-translation-result p{font-size:13px;line-height:1.85;color:#334d36;white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0}
+.reader-translation-result small{font-size:9px;color:#94a485}
+.reader-translation-result label{display:block;font-size:11px;margin-top:8px}
+.reader-translation-result textarea{width:100%;font-size:12px;line-height:1.7;min-height:75px;margin-top:5px}
+.reader-translation-error{color:#a05242!important;margin-top:9px!important}

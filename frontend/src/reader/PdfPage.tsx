@@ -94,16 +94,20 @@ export default function PdfPage({ pdf, value, scale, source, annotations, readOn
 
   function select() {
     const selection = window.getSelection()
-    if (!selection?.rangeCount || !rendered?.sourceValid || !source || readOnly || !sheet.current || !text.current || loading) return
+    if (!selection?.rangeCount || !rendered || !sheet.current || !text.current || loading) return
     if (!text.current.contains(selection.anchorNode)) return
     if (!text.current.contains(selection.focusNode)) { setTextNotice('跨页选区请分开添加高亮，每一处摘录对应一页。'); callbacks.current.onSelection(null); return }
     const range = textSelectionRange(selection, text.current)
     if (!range) { if (text.current.contains(selection.anchorNode) || text.current.contains(selection.focusNode)) callbacks.current.onSelection(null); return }
     const quote = (text.current.contains(selection.anchorNode) && text.current.contains(selection.focusNode) ? selection.toString() : range.toString()).trim()
     if (!quote) return
-    if (Array.from(quote).length > 2000) { setTextNotice('选中的文字过长，请缩短选区后再高亮。'); return }
-    try { callbacks.current.onSelection({ quote, rects: selectionRects(range, sheet.current, rendered.viewport, source.view_box), page_number: value.page_number, page_source_id: source.id }) }
-    catch (cause) { setTextNotice((cause as Error).message) }
+    if (Array.from(quote).length > 2000) { setTextNotice('选中的文字过长，请缩短选区后再翻译或高亮。'); callbacks.current.onSelection(null); return }
+    const next: SelectionValue = { quote, rects: [], page_number: value.page_number, page_source_id: null }
+    if (rendered.sourceValid && source) {
+      try { next.rects = selectionRects(range, sheet.current, rendered.viewport, source.view_box); next.page_source_id = source.id }
+      catch { setTextNotice('选区坐标暂时不可用，可以翻译文字或添加本页笔记。') }
+    }
+    callbacks.current.onSelection(next)
   }
   useTextSelection(text, select, () => callbacks.current.onSelection(null))
   function overlay(rect: Rect, key: string, className: string) { return <span key={key} className={className} style={{ left: rect[0], top: rect[1], width: rect[2] - rect[0], height: rect[3] - rect[1] }} /> }

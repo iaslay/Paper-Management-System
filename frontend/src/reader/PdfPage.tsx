@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { TextLayer, type PDFDocumentProxy, type RenderTask } from 'pdfjs-dist'
 import type { PageViewport } from 'pdfjs-dist/types/src/display/page_viewport'
 import type { Annotation, PageSource, PositionValue, Rect, SelectionValue } from './types'
@@ -7,36 +7,29 @@ import { buildIndex, type SearchHit, type TextIndex } from './textIndex'
 import { pageText } from './pageCache'
 import { useTextSelection } from './useTextSelection'
 
-export default function PdfPage({ pdf, value, source, annotations, readOnly, onReady, onSelection, searchHit, focusAnnotation, selectionActions }: {
+export default function PdfPage({ pdf, value, scale, source, annotations, readOnly, onReady, onSelection, searchHit, focusAnnotation, onLocate }: {
   pdf: PDFDocumentProxy; value: PositionValue; source?: PageSource; annotations: Annotation[]; readOnly: boolean;
   onReady: (page: number, scale: number) => void; onSelection: (value: SelectionValue | null) => void; searchHit: SearchHit | null; focusAnnotation: string | null;
-  selectionActions?: ReactNode;
+  scale: number; onLocate: (page: number, rect: Rect) => void;
 }) {
-  const scroll = useRef<HTMLDivElement>(null), sheet = useRef<HTMLDivElement>(null), canvas = useRef<HTMLCanvasElement>(null), text = useRef<HTMLDivElement>(null)
+  const sheet = useRef<HTMLDivElement>(null), canvas = useRef<HTMLCanvasElement>(null), text = useRef<HTMLDivElement>(null)
   const task = useRef<RenderTask | null>(null), textTask = useRef<TextLayer | null>(null)
   const callbacks = useRef({ onReady, onSelection }); callbacks.current = { onReady, onSelection }
-  const [width, setWidth] = useState(600), [loading, setLoading] = useState(true), [error, setError] = useState(''), [textNotice, setTextNotice] = useState('')
+  const [loading, setLoading] = useState(true), [error, setError] = useState(''), [textNotice, setTextNotice] = useState('')
   const [rendered, setRendered] = useState<{ viewport: PageViewport; page: number; index: TextIndex; layer: TextLayer; sourceValid: boolean } | null>(null)
   const [dimensions, setDimensions] = useState({ width: 1, height: 1, scale: 1 })
   const [searchRects, setSearchRects] = useState<Rect[]>([])
   useEffect(() => {
-    if (!scroll.current) return
-    const observer = new ResizeObserver(([entry]) => { if (entry.contentRect.width > 0) setWidth(entry.contentRect.width) })
-    observer.observe(scroll.current); return () => observer.disconnect()
-  }, [])
-  useEffect(() => {
     let active = true
     const previous = task.current
     previous?.cancel(); textTask.current?.cancel()
-    setLoading(true); setError(''); setTextNotice(''); setRendered(null); setSearchRects([]); callbacks.current.onSelection(null)
+    setLoading(true); setError(''); setTextNotice(''); setRendered(null); setSearchRects([])
     async function draw() {
       try {
         await previous?.promise.catch(() => {})
         const page = await pdf.getPage(value.page_number)
         if (!active || !canvas.current || !text.current || !sheet.current) return
         const rotation = (page.rotate + value.view_rotation) % 360
-        const base = page.getViewport({ scale: 1, rotation })
-        const scale = value.zoom_mode === 'custom' ? value.zoom! : Math.max(.1, (width - 32) / base.width)
         const viewport = page.getViewport({ scale, rotation }), ratio = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(16000000 / (viewport.width * viewport.height)), 16384 / Math.max(viewport.width, viewport.height))
         setDimensions({ width: viewport.width, height: viewport.height, scale: scale * page.userUnit })
         sheet.current.style.width = `${viewport.width}px`; sheet.current.style.height = `${viewport.height}px`
@@ -73,8 +66,7 @@ export default function PdfPage({ pdf, value, source, annotations, readOnly, onR
     }
     void draw()
     return () => { active = false; task.current?.cancel(); textTask.current?.cancel() }
-  }, [pdf, value.page_number, value.zoom_mode, value.zoom, value.view_rotation, width, source, readOnly])
-  useEffect(() => { for (const page of [value.page_number - 1, value.page_number + 1]) { if (page >= 1 && page <= pdf.numPages) void pageText(pdf, page).catch(() => {}) } }, [pdf, value.page_number])
+  }, [pdf, value.page_number, value.view_rotation, scale, source, readOnly])
 
   useEffect(() => {
     setSearchRects([])
@@ -91,18 +83,20 @@ export default function PdfPage({ pdf, value, source, annotations, readOnly, onR
       const origin = sheet.current.getBoundingClientRect()
       const rects = ranges.flatMap(range => Array.from(range.getClientRects()).filter(r => r.width > 0).map(r => [r.left - origin.left, r.top - origin.top, r.right - origin.left, r.bottom - origin.top] as Rect))
       setSearchRects(rects)
-      if (rects[0]) scroll.current?.scrollTo({ top: Math.max(0, rects[0][1] - 80), left: Math.max(0, rects[0][0] - 20), behavior: 'smooth' })
+      if (rects[0]) onLocate(rendered.page, rects[0])
     } catch { setTextNotice('搜索已定位到对应页，文字位置请手动核对。') }
   }, [rendered, searchHit])
   useEffect(() => {
     if (!focusAnnotation || !rendered) return
     const annotation = annotations.find(item => item.id === focusAnnotation)
-    if (annotation?.rects[0]) { const rect = toViewRect(rendered.viewport, annotation.rects[0]); scroll.current?.scrollTo({ top: Math.max(0, rect[1] - 70), left: Math.max(0, rect[0] - 30), behavior: 'smooth' }) }
+    if (annotation?.page_number === rendered.page && annotation.rects[0]) { const rect = toViewRect(rendered.viewport, annotation.rects[0]); onLocate(rendered.page, rect) }
   }, [focusAnnotation, rendered, annotations])
 
   function select() {
     const selection = window.getSelection()
     if (!selection?.rangeCount || !rendered?.sourceValid || !source || readOnly || !sheet.current || !text.current || loading) return
+    if (!text.current.contains(selection.anchorNode)) return
+    if (!text.current.contains(selection.focusNode)) { setTextNotice('跨页选区请分开添加高亮，每一处摘录对应一页。'); callbacks.current.onSelection(null); return }
     const range = textSelectionRange(selection, text.current)
     if (!range) { if (text.current.contains(selection.anchorNode) || text.current.contains(selection.focusNode)) callbacks.current.onSelection(null); return }
     const quote = (text.current.contains(selection.anchorNode) && text.current.contains(selection.focusNode) ? selection.toString() : range.toString()).trim()
@@ -113,9 +107,8 @@ export default function PdfPage({ pdf, value, source, annotations, readOnly, onR
   }
   useTextSelection(text, select, () => callbacks.current.onSelection(null))
   function overlay(rect: Rect, key: string, className: string) { return <span key={key} className={className} style={{ left: rect[0], top: rect[1], width: rect[2] - rect[0], height: rect[3] - rect[1] }} /> }
-  return <div className="reader-page-column">
-    {textNotice && <p className="reader-text-notice" role="status">{textNotice}</p>}
-    <div className="reader-page-scroll" ref={scroll}>
+  return <div className="reader-rendered-page">
+    {textNotice && <p className="reader-page-notice" role="status">{textNotice}</p>}
       {loading && <div className="reader-loading" role="status">正在显示第 {value.page_number} 页…</div>}
       {error && <p className="reader-load-error" role="alert">{error}</p>}
       <div className="reader-sheet" ref={sheet} style={{ width: dimensions.width, height: dimensions.height, visibility: error || loading ? 'hidden' : 'visible', '--total-scale-factor': dimensions.scale } as CSSProperties}>
@@ -123,7 +116,5 @@ export default function PdfPage({ pdf, value, source, annotations, readOnly, onR
         <div className="reader-overlays">{rendered && annotations.filter(item => item.page_number === rendered.page && item.file_hash === source?.file_hash && rendered.sourceValid).flatMap(item => item.rects.map((rect, i) => overlay(toViewRect(rendered.viewport, rect), `${item.id}-${i}`, `reader-highlight ${item.color} ${focusAnnotation === item.id ? 'emphasis' : ''}`)))}{searchRects.map((rect, i) => overlay(rect, `search-${i}`, 'reader-search-mark'))}</div>
         <div className="textLayer" ref={text} />
       </div>
-    </div>
-    {selectionActions}
   </div>
 }

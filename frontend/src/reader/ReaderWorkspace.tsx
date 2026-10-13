@@ -4,7 +4,7 @@ import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { ChevronLeft, ChevronRight, RotateCw, PanelLeft, Search, NotebookPen, Minus, Plus } from 'lucide-react'
 import { api, readingApi, type Paper } from '../api'
 import { Modal, Confirm } from '../components'
-import PdfPage from './PdfPage'
+import PdfDocument, { type PageJump } from './PdfDocument'
 import ReaderNavigation from './ReaderNavigation'
 import ReaderSearch from './ReaderSearch'
 import NotesPanel from './NotesPanel'
@@ -32,6 +32,9 @@ const ReaderSession = forwardRef<ReaderHandle, { paper: Paper; reader: ReaderOpe
   const [annotations, setAnnotations] = useState<Annotation[]>([]), [recordTick, setRecordTick] = useState(0), [recordError, setRecordError] = useState('')
   const [highlightDrafts, setHighlightDrafts] = useState<{ key: string; selection: SelectionValue; color: Color; comment?: string }[]>([])
   const [comparePosition, setComparePosition] = useState(false), [confirmPosition, setConfirmPosition] = useState(false), [otherPageNotice, setOtherPageNotice] = useState(false)
+  const [jump, setJump] = useState<PageJump | null>(null), [visiblePages, setVisiblePages] = useState([state.draft.page_number])
+  const visibleKey = visiblePages.join(',')
+  const showPages = useCallback((pages: number[]) => setVisiblePages(previous => previous.join(',') === pages.join(',') ? previous : pages), [])
   const channel = useRef<BroadcastChannel | null>(null)
   const notifyChange = useCallback(() => setRecordTick(t => t + 1), [])
   useImperativeHandle(ref, () => ({ dirty: () => [...registry.current.values()].some(control => control.dirty()), flush: async () => (await Promise.all([...registry.current.values()].map(control => control.flush()))).every(Boolean), text: () => [...registry.current.values()].filter(control => control.dirty()).map(control => control.text()).join('\n\n'), retry: () => { registry.current.forEach(control => { void control.flush() }); notifyChange() } }), [notifyChange])
@@ -47,22 +50,25 @@ const ReaderSession = forwardRef<ReaderHandle, { paper: Paper; reader: ReaderOpe
     return () => { window.removeEventListener('beforeunload', before); document.removeEventListener('visibilitychange', hidden) }
   }, [dirty, enabled, saveTick])
   useEffect(() => { setPageInput(String(state.draft.page_number)) }, [state.draft.page_number])
-  useEffect(() => { if (reader.position && !queue.dirty() && reader.position.revision > (queue.snapshot().remote?.revision || 0)) queue.adopt(reader.position, positionValue(reader.position)) }, [reader.position, queue])
+  useEffect(() => { if (reader.position && !queue.dirty() && reader.position.revision > (queue.snapshot().remote?.revision || 0)) { const previous = queue.snapshot().draft.page_number; queue.adopt(reader.position, positionValue(reader.position)); if (previous !== reader.position.page_number) setJump(value => ({ page: reader.position!.page_number, nonce: (value?.nonce || 0) + 1 })) } }, [reader.position, queue])
   useEffect(() => {
     let active = true
     async function load() {
-      const items: Annotation[] = []
-      for (let page = 1; active; page++) {
-        const list = await api<PageList<Annotation>>(`/papers/${paper.id}/annotations?page_number=${state.draft.page_number}&page=${page}&page_size=200`)
-        if (!active) return
-        items.push(...list.items)
-        if (items.length >= list.total) break
-      }
-      if (active) { setAnnotations(items); setRecordError('') }
+      const groups = await Promise.all(visiblePages.map(async number => {
+        const items: Annotation[] = []
+        for (let page = 1; active; page++) {
+          const list = await api<PageList<Annotation>>(`/papers/${paper.id}/annotations?page_number=${number}&page=${page}&page_size=200`)
+          if (!active) return []
+          items.push(...list.items)
+          if (items.length >= list.total) break
+        }
+        return items
+      }))
+      if (active) { setAnnotations(previous => [...previous.filter(item => !visiblePages.includes(item.page_number)), ...groups.flat()]); setRecordError('') }
     }
-    setAnnotations([]); void load().catch(cause => { if (active) setRecordError((cause as Error).message) })
+    void load().catch(cause => { if (active) setRecordError((cause as Error).message) })
     return () => { active = false }
-  }, [paper.id, state.draft.page_number, recordTick, enabled])
+  }, [paper.id, visibleKey, recordTick, enabled])
   useEffect(() => {
     if (typeof BroadcastChannel === 'undefined') return
     const connection = new BroadcastChannel('paperboard-reading-records'); channel.current = connection
@@ -74,6 +80,7 @@ const ReaderSession = forwardRef<ReaderHandle, { paper: Paper; reader: ReaderOpe
   function go(page: number, annotationId?: string, hit?: SearchHit) {
     if (!Number.isInteger(page) || page < 1 || page > paper.page_count) { setMessage(`请输入 1～${paper.page_count} 范围内的页码。`); setPageInput(String(state.draft.page_number)); return }
     setMessage(''); setFocusAnnotation(annotationId || null); setSearchHit(hit || null)
+    setJump(previous => ({ page, nonce: (previous?.nonce || 0) + 1 }))
     if (page !== state.draft.page_number) change({ ...state.draft, page_number: page })
   }
   function createHighlight(color: Color, comment?: string) {
@@ -82,20 +89,19 @@ const ReaderSession = forwardRef<ReaderHandle, { paper: Paper; reader: ReaderOpe
   }
   function highlightSaved(result: AnnotationResult, key: string) { setHighlightDrafts(previous => previous.filter(draft => draft.key !== key)); notifyChange(); announce() }
   useEffect(() => { if (openAt) go(openAt.page) }, [openAt?.nonce])
-  const source = reader.page_sources.find(item => item.page_number === state.draft.page_number)
   const readOnly = reader.read_only
   return <section className="reader-workspace">
-    <div className="reader-toolbar"><span className="reader-toolbar-name" title={paper.title}>{paper.title}</span>{readOnly && <span className="reader-read-only">回收站只读</span>}<button className="icon-button" aria-label="PDF 上一页" disabled={!pdf || state.draft.page_number <= 1} onClick={() => go(state.draft.page_number - 1)}><ChevronLeft size={17} /></button><label className="reader-page-control"><input aria-label="PDF 页码" inputMode="numeric" value={pageInput} disabled={!pdf} onChange={event => setPageInput(event.target.value)} onBlur={() => go(Number(pageInput))} onKeyDown={event => { if (event.key === 'Enter') go(Number(pageInput)) }} /><span>／{paper.page_count} 页</span></label><button className="icon-button" aria-label="PDF 下一页" disabled={!pdf || state.draft.page_number >= paper.page_count} onClick={() => go(state.draft.page_number + 1)}><ChevronRight size={17} /></button><button className="icon-button" aria-label="缩小 PDF" disabled={!pdf || (state.draft.zoom_mode === 'custom' && state.draft.zoom! <= .5)} onClick={() => change({ ...state.draft, zoom_mode: 'custom', zoom: Math.max(.5, Math.round(((state.draft.zoom || renderScale) - .25) * 4) / 4) })}><Minus size={15} /></button><select aria-label="PDF 缩放比例" value={state.draft.zoom_mode === 'fit_width' ? 'fit' : String(state.draft.zoom)} disabled={!pdf} onChange={event => event.target.value === 'fit' ? change({ ...state.draft, zoom_mode: 'fit_width', zoom: null }) : change({ ...state.draft, zoom_mode: 'custom', zoom: Number(event.target.value) })}><option value="fit">适应宽度</option>{[.5, .75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3].map(value => <option key={value} value={value}>{Math.round(value * 100)}%</option>)}</select><button className="icon-button" aria-label="放大 PDF" disabled={!pdf || (state.draft.zoom_mode === 'custom' && state.draft.zoom! >= 3)} onClick={() => change({ ...state.draft, zoom_mode: 'custom', zoom: Math.min(3, Math.max(.5, Math.round(((state.draft.zoom || renderScale) + .25) * 4) / 4)) })}><Plus size={15} /></button><button className="icon-button" aria-label="顺时针旋转 PDF" disabled={!pdf} onClick={() => change({ ...state.draft, view_rotation: (state.draft.view_rotation + 90) % 360 })}><RotateCw size={17} /></button><span className="reader-toolbar-spacer" /><button className={`button compact secondary ${panel === 'navigation' ? 'active' : ''}`} disabled={!pdf} onClick={() => setPanel(panel === 'navigation' ? null : 'navigation')}><PanelLeft size={14} />导航</button><button className={`button compact secondary ${panel === 'search' ? 'active' : ''}`} disabled={!pdf} onClick={() => setPanel(panel === 'search' ? null : 'search')}><Search size={14} />搜索</button><button className={`button compact secondary ${notesVisible ? 'active' : ''} ${notesDirty ? 'reader-record-pending' : ''}`} title={notesDirty ? '记录中有未保存内容，点击查看' : '显示或收起阅读记录'} onClick={() => setNotesVisible(!notesVisible)}><NotebookPen size={14} />记录</button></div>
+    <div className="reader-toolbar"><span className="reader-toolbar-name" title={paper.title}>{paper.title}</span>{readOnly && <span className="reader-read-only">回收站只读</span>}<button className="icon-button" aria-label="PDF 上一页" disabled={!pdf || state.draft.page_number <= 1} onClick={() => go(state.draft.page_number - 1)}><ChevronLeft size={17} /></button><label className="reader-page-control"><input aria-label="PDF 页码" inputMode="numeric" value={pageInput} disabled={!pdf} onChange={event => setPageInput(event.target.value)} onBlur={() => { if (Number(pageInput) !== state.draft.page_number) go(Number(pageInput)) }} onKeyDown={event => { if (event.key === 'Enter') go(Number(pageInput)) }} /><span>／{paper.page_count} 页</span></label><button className="icon-button" aria-label="PDF 下一页" disabled={!pdf || state.draft.page_number >= paper.page_count} onClick={() => go(state.draft.page_number + 1)}><ChevronRight size={17} /></button><button className="icon-button" aria-label="缩小 PDF" disabled={!pdf || (state.draft.zoom_mode === 'custom' && state.draft.zoom! <= .5)} onClick={() => change({ ...state.draft, zoom_mode: 'custom', zoom: Math.max(.5, Math.round(((state.draft.zoom || renderScale) - .25) * 4) / 4) })}><Minus size={15} /></button><select aria-label="PDF 缩放比例" value={state.draft.zoom_mode === 'fit_width' ? 'fit' : String(state.draft.zoom)} disabled={!pdf} onChange={event => event.target.value === 'fit' ? change({ ...state.draft, zoom_mode: 'fit_width', zoom: null }) : change({ ...state.draft, zoom_mode: 'custom', zoom: Number(event.target.value) })}><option value="fit">适应宽度</option>{[.5, .75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3].map(value => <option key={value} value={value}>{Math.round(value * 100)}%</option>)}</select><button className="icon-button" aria-label="放大 PDF" disabled={!pdf || (state.draft.zoom_mode === 'custom' && state.draft.zoom! >= 3)} onClick={() => change({ ...state.draft, zoom_mode: 'custom', zoom: Math.min(3, Math.max(.5, Math.round(((state.draft.zoom || renderScale) + .25) * 4) / 4)) })}><Plus size={15} /></button><button className="icon-button" aria-label="顺时针旋转 PDF" disabled={!pdf} onClick={() => change({ ...state.draft, view_rotation: (state.draft.view_rotation + 90) % 360 })}><RotateCw size={17} /></button><span className="reader-toolbar-spacer" /><button className={`button compact secondary ${panel === 'navigation' ? 'active' : ''}`} disabled={!pdf} onClick={() => setPanel(panel === 'navigation' ? null : 'navigation')}><PanelLeft size={14} />导航</button><button className={`button compact secondary ${panel === 'search' ? 'active' : ''}`} disabled={!pdf} onClick={() => setPanel(panel === 'search' ? null : 'search')}><Search size={14} />搜索</button><button className={`button compact secondary ${notesVisible ? 'active' : ''} ${notesDirty ? 'reader-record-pending' : ''}`} title={notesDirty ? '记录中有未保存内容，点击查看' : '显示或收起阅读记录'} onClick={() => setNotesVisible(!notesVisible)}><NotebookPen size={14} />记录</button></div>
     {(message || recordError) && <p className="reader-text-notice" role="alert">{message || recordError}</p>}
     {otherPageNotice && <p className="reader-text-notice">其他页面更新了这篇论文的记录，保存时会检查版本。<button className="text-button" onClick={() => { notifyChange(); setOtherPageNotice(false) }}>刷新记录</button></p>}
     {(positionIssue || noteIssue) && !readOnly && <div className="reader-save-warning" role="alert"><span>{positionIssue ? state.error?.message || '阅读位置尚未保存，请处理后再关闭。' : noteIssue?.error?.message || '阅读记录尚未保存，请打开记录处理。'}</span>{positionIssue && state.phase === 'failed' && <button className="text-button" onClick={queue.retry}>重试保存</button>}{state.phase === 'conflict' && <button className="text-button" onClick={() => setComparePosition(true)}>选择继续位置</button>}{noteIssue && <button className="text-button" onClick={() => setNotesVisible(true)}>查看记录</button>}</div>}
     <div className={`reader-body ${panel ? 'with-navigation' : ''} ${notesVisible ? 'with-notes' : ''}`}>
       {pdf && panel === 'navigation' && <ReaderNavigation pdf={pdf} current={state.draft.page_number} go={go} />}
       {pdf && panel === 'search' && <ReaderSearch pdf={pdf} current={state.draft.page_number} onHit={hit => go(hit.page, undefined, hit)} />}
-      {pdf ? <PdfPage pdf={pdf} value={state.draft} source={source} annotations={annotations} readOnly={readOnly || !enabled} onReady={(page, scale) => { setReadyPage(page); setRenderScale(scale) }} onSelection={next => setSelection(previous => next && previous && JSON.stringify(next) === JSON.stringify(previous) ? previous : next)} searchHit={searchHit} focusAnnotation={focusAnnotation} selectionActions={selection && <SelectionToolbar key={`${selection.page_number}-${selection.quote}`} selection={selection} onCreate={createHighlight} onClose={() => { setSelection(null); window.getSelection()?.removeAllRanges() }} />} /> : <div className="reader-document-empty">{loading ? <p>正在加载原文…</p> : <><p role="alert">{fileError || '原文文件缺失，已有笔记仍可查看。请检查数据目录或恢复备份。'}</p><button className="button secondary" onClick={onReload}>重新加载原文</button><a className="button secondary" href={`/api/v1/papers/${paper.id}/file?download=true`}>下载原文检查</a></>}</div>}
-      <div className="reader-notes-holder" style={{ display: notesVisible ? undefined : 'none' }}><NotesPanel paper={paper} currentPage={state.draft.page_number} annotations={annotations} register={register} enabled={enabled} readOnly={readOnly} onChanged={() => { notifyChange(); announce() }} onGo={go} reload={recordTick} drafts={highlightDrafts} onHighlightSaved={highlightSaved} /></div>
+      {pdf ? <PdfDocument pdf={pdf} value={state.draft} sources={reader.page_sources} jump={jump} onVisiblePages={showPages} onPageChange={page => { setFocusAnnotation(null); setSearchHit(null); queue.set({ ...queue.snapshot().draft, page_number: page }); setSelection(null) }} annotations={annotations} readOnly={readOnly || !enabled} onReady={(page, scale) => { setReadyPage(page); setRenderScale(scale) }} onSelection={next => setSelection(previous => next && previous && JSON.stringify(next) === JSON.stringify(previous) ? previous : next)} searchHit={searchHit} focusAnnotation={focusAnnotation} selectionActions={selection && <SelectionToolbar key={`${selection.page_number}-${selection.quote}`} selection={selection} onCreate={createHighlight} onClose={() => { setSelection(null); window.getSelection()?.removeAllRanges() }} />} /> : <div className="reader-document-empty">{loading ? <p>正在加载原文…</p> : <><p role="alert">{fileError || '原文文件缺失，已有笔记仍可查看。请检查数据目录或恢复备份。'}</p><button className="button secondary" onClick={onReload}>重新加载原文</button><a className="button secondary" href={`/api/v1/papers/${paper.id}/file?download=true`}>下载原文检查</a></>}</div>}
+      <div className="reader-notes-holder" style={{ display: notesVisible ? undefined : 'none' }}><NotesPanel paper={paper} currentPage={state.draft.page_number} annotations={annotations.filter(item => item.page_number === state.draft.page_number)} register={register} enabled={enabled} readOnly={readOnly} onChanged={() => { notifyChange(); announce() }} onGo={go} reload={recordTick} drafts={highlightDrafts} onHighlightSaved={highlightSaved} /></div>
     </div>
-    {comparePosition && state.current && <Modal title="选择继续阅读位置" onClose={() => setComparePosition(false)}><div className="modal-body"><p>当前页面：第 {state.draft.page_number} 页；服务器已保存：第 {state.current.page_number} 页。</p><p>位置选择不会覆盖个人笔记。</p></div><footer className="modal-footer"><button className="button secondary" onClick={() => { queue.adopt(state.current!, positionValue(state.current!)); setComparePosition(false) }}>采用已保存位置</button><button className="button primary" onClick={() => setConfirmPosition(true)}>继续当前页</button></footer></Modal>}
+    {comparePosition && state.current && <Modal title="选择继续阅读位置" onClose={() => setComparePosition(false)}><div className="modal-body"><p>当前页面：第 {state.draft.page_number} 页；服务器已保存：第 {state.current.page_number} 页。</p><p>位置选择不会覆盖个人笔记。</p></div><footer className="modal-footer"><button className="button secondary" onClick={() => { queue.adopt(state.current!, positionValue(state.current!)); setJump(previous => ({ page: state.current!.page_number, nonce: (previous?.nonce || 0) + 1 })); setComparePosition(false) }}>采用已保存位置</button><button className="button primary" onClick={() => setConfirmPosition(true)}>继续当前页</button></footer></Modal>}
     {confirmPosition && state.current && <Confirm title="保存当前阅读位置？" description="服务器上的继续阅读位置将更新为当前页，个人笔记保持原有内容。" action="继续当前页" busy={false} onClose={() => setConfirmPosition(false)} onConfirm={() => { queue.overwrite(state.current!); setConfirmPosition(false); setComparePosition(false) }} />}
   </section>
 })

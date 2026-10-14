@@ -44,9 +44,9 @@
   .modal.reader-modal.reader-full-page .detail-tabs{padding:5px 8px;gap:2px}
   .modal.reader-modal.reader-full-page .reader-workspace{padding:0 8px 0}
   .modal.reader-modal.reader-full-page .reader-body{grid-template-rows:minmax(0,1fr)}
-  .modal.reader-modal.reader-full-page .reader-body.with-notes{grid-template-rows:minmax(0,1fr) minmax(0,.8fr)}
+  .modal.reader-modal.reader-full-page .reader-body.with-sidebar{grid-template-rows:minmax(0,1fr) minmax(0,.8fr)}
   .modal.reader-modal.reader-full-page .reader-body.with-navigation{grid-template-rows:minmax(0,.4fr) minmax(0,1fr)}
-  .modal.reader-modal.reader-full-page .reader-body.with-navigation.with-notes{grid-template-rows:minmax(0,.4fr) minmax(0,1fr) minmax(0,.8fr)}
+  .modal.reader-modal.reader-full-page .reader-body.with-navigation.with-sidebar{grid-template-rows:minmax(0,.4fr) minmax(0,1fr) minmax(0,.8fr)}
   .modal.reader-modal.reader-full-page .reader-navigation,.modal.reader-modal.reader-full-page .reader-search-panel,.modal.reader-modal.reader-full-page .reader-notes-panel{max-height:none}
 }
 

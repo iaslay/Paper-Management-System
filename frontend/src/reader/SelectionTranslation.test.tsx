@@ -67,16 +67,27 @@ it('服务错误后可重试，复制权限不足时提供手动复制', async (
   fireEvent.click(rendered.getByRole('button', { name: '复制译文' }))
   await rendered.findByLabelText('手动复制译文')
 })
-it('关闭选区中断请求；只读选区仍可翻译，退出键先关闭选区', async () => {
-  const close = vi.fn()
-  const rendered = render(<SelectionToolbar paper={paper} selection={{ ...selection, page_source_id: null, rects: [] }} canHighlight={false} onCreate={vi.fn()} onClose={close} />)
-  await rendered.findByText(/仅发送选中文字/)
+it('只读选区也能打开翻译侧栏，退出键先关闭选区操作', async () => {
+  const close = vi.fn(), translate = vi.fn()
+  const rendered = render(<SelectionToolbar selection={{ ...selection, page_source_id: null, rects: [] }} canHighlight={false} onCreate={vi.fn()} onClose={close} onTranslate={translate} />)
   expect((rendered.getByRole('button', { name: '保存高亮' }) as HTMLButtonElement).disabled).toBe(true)
+  fireEvent.click(rendered.getByRole('button', { name: '翻译' }))
+  expect(translate).toHaveBeenCalledOnce(); expect(api).not.toHaveBeenCalled()
+  fireEvent.keyDown(document, { key: 'Escape' }); expect(close).toHaveBeenCalledOnce()
+})
+it('离开阅读器后中断翻译，忽略晚到结果', async () => {
+  const rendered = await opened()
   vi.mocked(api).mockImplementation(() => new Promise(() => {}))
   fireEvent.click(rendered.getByRole('button', { name: '翻译' }))
   const signal = vi.mocked(api).mock.calls[1][1]?.signal
-  fireEvent.keyDown(document, { key: 'Escape' }); expect(close).toHaveBeenCalledOnce()
   rendered.unmount(); expect(signal?.aborted).toBe(true)
+})
+it('显式选区翻译请求等配置读取完后执行一次，重复渲染不重复调用', async () => {
+  const rendered = render(<SelectionTranslation paper={paper} selection={selection} request={1} />)
+  await rendered.findByText('结构化记忆')
+  expect(vi.mocked(api).mock.calls.filter(([path])=>path.endsWith('/translation') && path!== '/settings/translation')).toHaveLength(1)
+  rendered.rerender(<SelectionTranslation paper={paper} selection={selection} request={1} />)
+  expect(vi.mocked(api).mock.calls).toHaveLength(2)
 })
 it('前端等待超时中断请求并显示可重试的中文提示', async () => {
   const rendered = await opened()

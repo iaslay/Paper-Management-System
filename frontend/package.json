@@ -1,7 +1,7 @@
 {
   "name": "paperboard",
   "private": true,
-  "version": "0.4.1",
+  "version": "0.4.2",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --configLoader native",
@@ -10,6 +10,7 @@
     "test": "vitest --configLoader native"
   },
   "dependencies": {
+    "katex": "0.19.0",
     "lucide-react": "^0.468.0",
     "pdfjs-dist": "^6.4.299",
     "react": "^19.3.0",

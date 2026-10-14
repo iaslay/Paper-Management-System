@@ -97,3 +97,21 @@ it('前端等待超时中断请求并显示可重试的中文提示', async () =
   await act(() => vi.advanceTimersByTimeAsync(63000))
   expect(rendered.getByRole('alert').textContent).toContain('翻译等待超时')
 })
+it('侧栏译文渲染公式，复制和手动复制均保留完整 LaTeX 原文', async () => {
+  const translation = String.raw`给定话语 $U_t$，记忆摘要为：
+\[M_t = \Phi_{\text{memory}}(U_t,H^{1:k-1})\]`
+  vi.mocked(api).mockImplementation(async path => path === '/settings/translation' ? config : { ...result, translation })
+  const rendered = await opened()
+  fireEvent.click(rendered.getByRole('button', { name: '翻译' }))
+  await rendered.findByText('中文译文')
+  expect(rendered.container.querySelectorAll('.reader-translation-result .katex')).toHaveLength(2)
+  const copy = vi.fn().mockResolvedValue(undefined)
+  vi.stubGlobal('navigator', { clipboard: { writeText: copy } })
+  fireEvent.click(rendered.getByRole('button', { name: '复制译文' }))
+  await rendered.findByText('已复制')
+  expect(copy).toHaveBeenCalledWith(translation)
+  copy.mockRejectedValueOnce(new Error('denied'))
+  fireEvent.click(rendered.getByRole('button', { name: '已复制' }))
+  const textarea = await rendered.findByLabelText('手动复制译文') as HTMLTextAreaElement
+  expect(textarea.value).toBe(translation)
+})

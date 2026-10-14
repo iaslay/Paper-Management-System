@@ -33,16 +33,20 @@
 .reader-page-notice{position:absolute;left:8px;right:8px;top:8px;z-index:3;max-width:500px;margin:0 auto;padding:6px 9px;background:#fff8e4e8;border-radius:4px;color:#796236;font-size:11px;line-height:1.6}
 .reader-rendered-page .reader-loading{min-height:0;background:#f7f8f3}
 .reader-translation{border-top:1px solid #dbe6ce;margin-top:10px;padding-top:9px}
-.reader-translation-heading,.reader-translation-wait,.reader-translation-result>div{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.reader-translation-heading,.reader-translation-wait,.reader-translation-result-heading{display:flex;align-items:center;gap:8px;justify-content:space-between}
 .reader-translation-heading small{font-size:9px;color:#829271;overflow-wrap:anywhere;text-align:right;max-width:240px}
 .reader-translation-wait{font-size:12px;color:#617a50;padding:12px 0 3px}
 .reader-translation .text-button{display:inline-flex;align-items:center;gap:4px;font-size:11px}
 .reader-translation-result{margin-top:9px;padding:10px;border:1px solid #d8e5c9;background:#fffefa;border-radius:5px}
 .reader-translation-result strong{font-size:11px;color:#5b7949}
-.reader-translation-result p{font-size:13px;line-height:1.85;color:#334d36;white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0}
+.reader-translation-text{font-size:13px;line-height:1.85;color:#334d36;white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0}
 .reader-translation-result small{font-size:9px;color:#94a485}
 .reader-translation-result label{display:block;font-size:11px;margin-top:8px}
 .reader-translation-result textarea{width:100%;font-size:12px;line-height:1.7;min-height:75px;margin-top:5px}
+.reader-translation-text{min-width:0}.reader-translation-text .katex{font-size:1.1em;white-space:nowrap}
+.reader-math-inline{display:inline-block;max-width:100%;overflow-x:auto;overflow-y:hidden;vertical-align:middle;padding:3px;line-height:normal}
+.reader-math-display{max-width:100%;overflow-x:auto;overflow-y:hidden;padding:4px 0;white-space:normal}.reader-math-display .katex-display{margin:.55em 0}.reader-math-display .katex-display>.katex{text-align:left}
+.reader-math-fallback{white-space:pre-wrap;overflow-wrap:anywhere}
 .reader-translation-error{color:#a05242!important;margin-top:9px!important}
 .reader-sidebar{display:flex;flex-direction:column;position:relative;min-width:0;min-height:0;height:100%;background:#fffefa;border-left:1px solid #dbe3d2}
 .reader-sidebar-resize{position:absolute;top:0;bottom:0;left:-6px;width:12px;z-index:6;cursor:col-resize;touch-action:none;user-select:none;outline:none}
@@ -52,6 +56,6 @@
 .reader-sidebar .reader-translation{display:flex;flex-direction:column;flex:1;min-height:0;padding:14px;margin:0;border:0;overflow:auto;gap:12px}
 .reader-translation-source{flex-shrink:0;border-bottom:1px solid #e3e9db;padding-bottom:11px}.reader-translation-source summary{font-size:11px;color:#7c906e;cursor:pointer}.reader-translation-source blockquote{max-height:160px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.8;color:#54654d;margin:9px 0 0;padding-left:9px;border-left:2px solid #d4e0c8;user-select:text}
 .reader-sidebar .reader-translation-heading{flex-shrink:0;gap:10px}.reader-sidebar .reader-translation-heading small{max-width:none;text-align:left}.reader-sidebar .reader-translation-heading .button{flex-shrink:0}
-.reader-sidebar .reader-translation-result{flex:1;min-height:160px;overflow:auto;margin:0;padding:14px;background:#fff;border-color:#e0e8d7}.reader-sidebar .reader-translation-result p{font-size:14px;line-height:1.95;margin:12px 0}.reader-sidebar .reader-translation-result strong{font-size:12px}
+.reader-sidebar .reader-translation-result{flex:1;min-height:160px;overflow:auto;margin:0;padding:14px;background:#fff;border-color:#e0e8d7}.reader-sidebar .reader-translation-text{font-size:14px;line-height:1.95;margin:12px 0}.reader-sidebar .reader-translation-result strong{font-size:12px}
 .reader-translation-empty{margin:auto;padding:30px 8px;text-align:center;color:#819570}.reader-translation-empty h3{font-size:16px;font-weight:500}.reader-translation-empty p{font-size:12px;line-height:1.9;margin:0}
 @media(max-width:740px){.reader-sidebar{height:auto;min-height:260px;max-height:44dvh;border-left:0;border-top:1px solid #dbe3d2}.reader-sidebar-resize{display:none}.reader-sidebar .reader-notes-panel{max-height:none}.reader-sidebar .reader-translation{padding:12px;gap:10px}.reader-translation-source blockquote{max-height:95px}.reader-sidebar .reader-translation-result{min-height:120px}.modal.reader-modal.reader-full-page .reader-sidebar{height:100%;min-height:0;max-height:none}}

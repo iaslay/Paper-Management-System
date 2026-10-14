@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Languages, Copy, X } from 'lucide-react'
 import { api, type Paper } from '../api'
 import type { SelectionValue } from './types'
+import MathText from './MathText'
 
 interface TranslationConfig { enabled: boolean; model: string; base_url: string; max_characters: number; timeout_seconds: number }
 interface TranslationResult { translation: string; model: string; cached: boolean }
@@ -59,6 +60,6 @@ export default function SelectionTranslation({ paper, selection, request = 0 }: 
     {status === 'loading' && <div className="reader-translation-wait"><span role="status">正在翻译…</span><button type="button" className="text-button" onClick={() => { stop(); setStatus('cancelled') }}><X size={13} />取消翻译</button></div>}
     {status === 'failed' && <p className="reader-translation-error" role="alert">{error}</p>}
     {status === 'cancelled' && <p role="status">已取消翻译</p>}
-    {result && <div className="reader-translation-result" aria-label="选中文字的中文译文"><div><strong>中文译文</strong><button type="button" className="text-button" onClick={() => void copy()}><Copy size={13} />{copied ? '已复制' : '复制译文'}</button></div><p>{result.translation}</p><small>{result.cached ? '已复用本次服务会话内的译文' : 'AI 译文'} · {result.model}</small>{copyFallback && <label>请选择译文后按 Ctrl+C<textarea aria-label="手动复制译文" value={result.translation} readOnly onFocus={event => event.currentTarget.select()} /></label>}</div>}
+    {result && <div className="reader-translation-result" aria-label="选中文字的中文译文"><div className="reader-translation-result-heading"><strong>中文译文</strong><button type="button" className="text-button" onClick={() => void copy()}><Copy size={13} />{copied ? '已复制' : '复制译文'}</button></div><MathText text={result.translation} /><small>{result.cached ? '已复用本次服务会话内的译文' : 'AI 译文'} · {result.model}</small>{copyFallback && <label>请选择译文后按 Ctrl+C<textarea aria-label="手动复制译文" value={result.translation} readOnly onFocus={event => event.currentTarget.select()} /></label>}</div>}
   </div>
 }

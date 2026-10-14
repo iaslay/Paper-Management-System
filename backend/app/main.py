@@ -101,7 +101,7 @@ def create_app(settings=None):
         await translation_service.close()
         engine.dispose()
 
-    app = FastAPI(title="研读 · 论文看板", version="0.4.1", lifespan=lifespan, docs_url=None, redoc_url=None)
+    app = FastAPI(title="研读 · 论文看板", version="0.4.2", lifespan=lifespan, docs_url=None, redoc_url=None)
     app.state.card_runner = card_runner
     app.state.translation_service = translation_service
     app.state.settings = settings
@@ -185,7 +185,7 @@ def create_app(settings=None):
 
     @app.get("/api/v1/health")
     def health():
-        return {"status": "ok", "stage": "cards", "version": "0.4.1"}
+        return {"status": "ok", "stage": "cards", "version": "0.4.2"}
 
     @app.get("/api/v1/status")
     def status(request: Request, db=Depends(database)):

@@ -17,6 +17,7 @@ class Settings:
     session_seconds: int = 24 * 60 * 60
     secure_cookie: bool = False
     ai_worker_enabled: bool = True
+    discovery_worker_enabled: bool = True
     allow_local_model: bool = False
     frontend_dir: Path | None = None
     translation_enabled: bool = True
@@ -46,6 +47,7 @@ class Settings:
             database_url=os.getenv("PAPERBOARD_DATABASE_URL", ""),
             secure_cookie=os.getenv("PAPERBOARD_COOKIE_SECURE", "0") == "1",
             ai_worker_enabled=os.getenv("PAPERBOARD_AI_WORKER", "1") == "1",
+            discovery_worker_enabled=os.getenv("PAPERBOARD_DISCOVERY_WORKER", "1") == "1",
             allow_local_model=os.getenv("PAPERBOARD_ALLOW_LOCAL_MODEL", "0") == "1",
             frontend_dir=Path(os.environ["PAPERBOARD_FRONTEND_DIR"]) if os.getenv("PAPERBOARD_FRONTEND_DIR") else None,
             translation_enabled=os.getenv("PAPERBOARD_TRANSLATION_ENABLED", "1") == "1",

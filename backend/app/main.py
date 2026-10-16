@@ -3,15 +3,11 @@
 import asyncio
 import hashlib
 import json
-import os
 import secrets
 import shutil
-import subprocess
-import sys
 import threading
 import uuid
 from contextlib import asynccontextmanager, suppress
-from pathlib import Path
 from typing import Literal
 from urllib.parse import urlparse
 
@@ -40,6 +36,9 @@ from . import ai_service as ai
 from . import ai_metadata
 from .translation import TranslationService, build_translation_router
 from .discussion import build_discussion_router
+from .discovery_service import DiscoveryService, own_candidate, attach_candidate
+from .discovery_api import build_discovery_router
+from .pdf_ingest import ingest_file
 
 COOKIE = "paperboard_session"
 PASSWORDS = PasswordHasher(time_cost=2, memory_cost=19456, parallelism=1)
@@ -52,6 +51,7 @@ def create_app(settings=None):
     write_lock = threading.RLock()
     card_runner = CardRunner(factory, write_lock, settings)
     translation_service = TranslationService(settings)
+    discovery_service = DiscoveryService(factory, write_lock, settings)
 
     def cleanup():
         with write_lock, factory() as db:
@@ -90,7 +90,13 @@ def create_app(settings=None):
 
         task = asyncio.create_task(periodic_cleanup())
         card_task = asyncio.create_task(card_runner.run()) if settings.ai_worker_enabled else None
+        discovery_task = asyncio.create_task(discovery_service.run()) if settings.discovery_worker_enabled else None
         yield
+        if discovery_task is not None:
+            discovery_service.stop.set()
+            discovery_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await discovery_task
         if card_task is not None:
             card_task.cancel()
             with suppress(asyncio.CancelledError):
@@ -101,9 +107,10 @@ def create_app(settings=None):
         await translation_service.close()
         engine.dispose()
 
-    app = FastAPI(title="研读 · 论文看板", version="0.4.2", lifespan=lifespan, docs_url=None, redoc_url=None)
+    app = FastAPI(title="研读 · 论文看板", version="0.5.0", lifespan=lifespan, docs_url=None, redoc_url=None)
     app.state.card_runner = card_runner
     app.state.translation_service = translation_service
+    app.state.discovery_service = discovery_service
     app.state.settings = settings
     app.state.session_factory = factory
     app.state.engine = engine
@@ -169,6 +176,7 @@ def create_app(settings=None):
     app.include_router(build_ai_router(database, require_user, write_lock, settings, card_runner))
     app.include_router(build_translation_router(database, require_user, translation_service))
     app.include_router(build_discussion_router(database, require_user, write_lock, settings))
+    app.include_router(build_discovery_router(database, require_user, write_lock, discovery_service))
 
     def user_view(db, user):
         workspace = db.get(Workspace, user.workspace_id)
@@ -185,7 +193,7 @@ def create_app(settings=None):
 
     @app.get("/api/v1/health")
     def health():
-        return {"status": "ok", "stage": "cards", "version": "0.4.2"}
+        return {"status": "ok", "stage": "discovery", "version": "0.5.0"}
 
     @app.get("/api/v1/status")
     def status(request: Request, db=Depends(database)):
@@ -244,7 +252,8 @@ def create_app(settings=None):
         return svc.list_papers(db, user.workspace_id, user_id=user.id, q=q, status=status, direction_ids=direction_ids, match=direction_match, unclassified=unclassified_only, topic_id=topic_id, tag_id=tag_id, favorite=favorite, year=year, trash=trash, sort=sort, page=page, page_size=page_size)
 
     @app.post("/api/v1/papers")
-    async def upload(file: UploadFile = File(), direction_ids: str = Form("[]"), user=Depends(require_user), db=Depends(database)):
+    async def upload(file: UploadFile = File(), direction_ids: str = Form("[]"), candidate_id: str | None = Form(None),
+                     candidate_confirmed: bool = Form(False), user=Depends(require_user), db=Depends(database)):
         filename = (file.filename or "论文.pdf").replace("\\", "/").split("/")[-1]
         if not filename.lower().endswith(".pdf") or len(filename) > 255:
             svc.fail("请选择文件名不超过 255 个字符的 PDF 文件。")
@@ -255,8 +264,11 @@ def create_app(settings=None):
         except (ValueError, TypeError):
             svc.fail("研究方向格式无效，请重新选择。")
         svc.validate_labels(db, user.workspace_id, ids, "research_direction")
+        candidate = own_candidate(db, user, candidate_id) if candidate_id else None
+        if candidate and not candidate_confirmed:
+            reading.fail("请先核对上传的 PDF 与所选候选论文对应。", "candidate_confirmation_required", 409)
         temporary = settings.data_dir / "tmp" / ("upload-" + uuid.uuid4().hex + ".pdf")
-        size, digest = 0, hashlib.sha256()
+        size = 0
         try:
             with temporary.open("wb") as output:
                 while chunk := await file.read(1024 * 1024):
@@ -264,51 +276,12 @@ def create_app(settings=None):
                     if size > settings.max_file_bytes:
                         svc.fail("文件超过 50 MiB，请压缩后重新上传。", 413)
                     output.write(chunk)
-                    digest.update(chunk)
-            if size == 0:
-                svc.fail("文件为空，请重新选择 PDF。")
-            file_hash = digest.hexdigest()
-            existing = db.scalar(select(Paper).where(Paper.workspace_id == user.workspace_id, Paper.file_hash == file_hash))
-            if existing:
-                if existing.deleted_at is not None:
-                    svc.fail("这份文件位于回收站，请先恢复已有论文。", 409)
-                return {"paper": svc.paper_view(db, existing), "duplicate": True}
-
-            def inspect():
-                try:
-                    result = subprocess.run([sys.executable, "-I", str(Path(__file__).with_name("pdf_inspect.py")), str(temporary)], capture_output=True, text=True, encoding="utf-8", timeout=20)
-                    if result.returncode != 0:
-                        return {"error": "PDF 检查失败，请检查文件后重试。"}
-                    return json.loads(result.stdout)
-                except (subprocess.TimeoutExpired, ValueError):
-                    return {"error": "PDF 检查超时或返回异常，请尝试较小的文件。"}
-
-            info = await run_in_threadpool(inspect)
-            if "error" in info:
-                svc.fail(info["error"])
-            if info["page_count"] > settings.max_pages:
-                svc.fail("论文超过 300 页，请拆分后重新上传。")
-            with write_lock:
-                db.expire_all()
-                workspace = db.scalar(select(Workspace).where(Workspace.id == user.workspace_id).with_for_update())
-                existing = db.scalar(select(Paper).where(Paper.workspace_id == user.workspace_id, Paper.file_hash == file_hash))
-                if existing:
-                    if existing.deleted_at is not None:
-                        svc.fail("这份文件位于回收站，请先恢复已有论文。", 409)
-                    return {"paper": svc.paper_view(db, existing), "duplicate": True}
-                used = db.scalar(select(func.coalesce(func.sum(Paper.file_size), 0)).where(Paper.workspace_id == user.workspace_id))
-                if used + size > workspace.quota_bytes:
-                    svc.fail("个人空间容量不足，请先整理回收站或调整容量。", 413)
-                svc.validate_labels(db, user.workspace_id, ids, "research_direction")
-                target = settings.data_dir / "files" / (file_hash + ".pdf")
-                os.replace(temporary, target)
-                paper = Paper(workspace_id=user.workspace_id, title=info["title"] or filename[:-4], authors=info["authors"], authors_search="\n".join(info["authors"]), original_filename=filename, file_hash=file_hash, file_size=size, page_count=info["page_count"])
-                db.add(paper)
-                db.flush()
-                reading.insert_sources(db, paper, info.get("page_sources", []))
-                svc.set_labels(db, paper, direction_ids=ids)
-                db.commit()
-                return JSONResponse({"paper": svc.paper_view(db, paper), "duplicate": False}, status_code=201)
+            def finish(db, paper):
+                if candidate:
+                    attach_candidate(db, user, own_candidate(db, user, candidate.id), paper)
+            paper, duplicate = await run_in_threadpool(ingest_file, db, settings, write_lock, user, temporary,
+                filename, ids, candidate.record if candidate else None, finish)
+            return JSONResponse({"paper": svc.paper_view(db, paper), "duplicate": duplicate}, status_code=200 if duplicate else 201)
         finally:
             await file.close()
             temporary.unlink(missing_ok=True)

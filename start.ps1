@@ -22,7 +22,7 @@ try {
         Invoke-CheckedCommand -Executable 'python' -Arguments @('-m', 'venv', '.venv')
         $Install = $true
     }
-    & $taskPython -c "import importlib.util, sys; sys.exit(0 if all(importlib.util.find_spec(name) for name in ['cryptography', 'pypdfium2', 'PIL']) else 1)"
+    & $taskPython -c "import importlib.util, sys; sys.exit(0 if all(importlib.util.find_spec(name) for name in ['cryptography', 'pypdfium2', 'PIL', 'httpx', 'acl_anthology', 'bibtexparser']) else 1)"
     if ($LASTEXITCODE -ne 0) { $Install = $true }
     if ($Install) {
         Write-Host '正在安装锁定的 Python 依赖…'

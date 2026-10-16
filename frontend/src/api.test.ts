@@ -2,6 +2,15 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { api, readingApi, ApiError } from './api'
 
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers() })
+it('PDF 补传交给浏览器生成分段表单边界，仍带同源请求标识', async () => {
+  const send = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }))
+  vi.stubGlobal('fetch', send)
+  const body = new FormData(); body.append('candidate_id', 'candidate')
+  await api('/papers', { method: 'POST', body })
+  expect(send.mock.calls[0][1].headers['Content-Type']).toBeUndefined()
+  expect(send.mock.calls[0][1].headers['X-Paperboard-Request']).toBe('1')
+  expect(send.mock.calls[0][1].body).toBe(body)
+})
 it('网络失败显示中文并保留调用方草稿恢复路径', async () => {
   vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
   await expect(readingApi('/notes/test')).rejects.toThrow('连接中断，请检查本机服务后重试。')

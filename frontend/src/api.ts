@@ -32,7 +32,7 @@ function expired(status: number) {
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch('/api/v1' + path, {
     credentials: 'same-origin', ...options,
-    headers: { 'Content-Type': 'application/json', 'X-Paperboard-Request': '1', ...options.headers },
+    headers: { ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), 'X-Paperboard-Request': '1', ...options.headers },
   }).catch(cause => { if (cause?.name === 'AbortError') throw cause; throw new Error('连接中断，请检查本机服务后重试。') })
   const data = await response.json().catch(() => ({}))
   if (!response.ok) {

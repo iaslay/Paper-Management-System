@@ -4,6 +4,7 @@ import { api, sizeText, type Paper, type Tag } from '../api'
 import { LabelPicker, Modal } from '../components'
 import MathText from '../reader/MathText'
 import DiscoverySettings from './DiscoverySettings'
+import QueryAssistant from './QueryAssistant'
 import { type Provider, type LiteratureRecord, type Candidate, type ImportTask, type Providers, type SearchResults, providerNames, taskNames, phaseNames, requestId, timeText } from './types'
 import './discovery.css'
 
@@ -11,7 +12,7 @@ type Form = { q: string; field: string; sort: string; year_from: string; year_to
 const emptyForm = (): Form => ({ q: '', field: 'all', sort: 'relevance', year_from: '', year_to: '', venue: '', category: '', date_from: '', date_to: '' })
 const activeStatus = (status: string) => ['queued', 'running', 'retrying'].includes(status)
 
-export default function DiscoveryPage({ active, tags, onOpenPaper, onChanged }: { active: boolean; tags: Tag[]; onOpenPaper: (id: string) => void; onChanged: () => void }) {
+export default function DiscoveryPage({ active, tags, onOpenPaper, onChanged, onModelSettings }: { active: boolean; tags: Tag[]; onOpenPaper: (id: string) => void; onChanged: () => void; onModelSettings?: () => void }) {
   const [provider, setProvider] = useState<Provider>('arxiv')
   const [forms, setForms] = useState<Record<Provider, Form>>({ arxiv: emptyForm(), acl: emptyForm(), ieee: emptyForm() })
   const [results, setResults] = useState<Partial<Record<Provider, SearchResults>>>({})
@@ -129,6 +130,10 @@ export default function DiscoveryPage({ active, tags, onOpenPaper, onChanged }: 
     <div className="discovery-source-tabs" role="group" aria-label="论文来源">{(['arxiv', 'acl', 'ieee'] as Provider[]).map(source => <button key={source} aria-pressed={provider === source} className={provider === source ? 'selected' : ''} onClick={() => switchProvider(source)}>{providerNames[source]}<span>{source === 'arxiv' ? '公开预印本' : source === 'acl' ? '自然语言处理文献' : 'API 检索 · 机构全文'}</span></button>)}</div>
     {error && <div className="error-message" role="alert">{error}</div>}{notice && <div className="success-message" role="status">{notice}</div>}
     <nav className="discovery-view-tabs" aria-label="发现论文视图">{([['search', '检索结果'], ['candidates', `待导入 · ${candidates.length}`], ['tasks', '导入任务']] as const).map(([value, label]) => <button className={tab === value ? 'selected' : ''} key={value} onClick={() => { setTab(value); setDetail(null) }}>{label}</button>)}</nav>
+    <div hidden={tab !== 'search'}>{(['arxiv', 'acl', 'ieee'] as Provider[]).map(source => <div key={source} hidden={provider !== source}><QueryAssistant provider={source} active={active && tab === 'search' && provider === source} onSettings={onModelSettings} onApply={({ q, years }) => {
+        searchAbort.current?.abort(); setLoading(false); setError(''); setDetail(null)
+        setForms(previous => ({ ...previous, [source]: { ...previous[source], q, ...(years ? { year_from: years.year_from?.toString() || '', year_to: years.year_to?.toString() || '' } : {}) } }))
+      }} /></div>)}</div>
     {tab === 'search' && <>
       <form className="discovery-search-form" onSubmit={event => { event.preventDefault(); void search() }}>
         <div className="discovery-search-line"><Search size={20} /><input aria-label="论文检索词" maxLength={500} value={form.q} onChange={e => update('q', e.target.value)} placeholder="关键词、标题、作者、论文 ID 或官方链接" /><button className="button primary" disabled={loading || !form.q.trim() || !!blocked}>{loading ? '正在检索…' : '检索论文'}</button>{loading && <button type="button" className="button secondary" onClick={() => { searchAbort.current?.abort(); setLoading(false) }}>取消</button>}</div>

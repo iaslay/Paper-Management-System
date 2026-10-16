@@ -40,8 +40,9 @@ def config_view(config):
 def tasks_usage(db, workspace, month=None):
     tasks = db.scalars(select(GenerationTask).where(GenerationTask.workspace_id == workspace, GenerationTask.budget_month == (month or month_key()))).all()
     tests = db.scalars(select(ModelCall).where(ModelCall.workspace_id == workspace, ModelCall.task_id.is_(None), ModelCall.budget_month == (month or month_key()))).all()
-    test_tokens = sum(call_tokens(call) for call in tests)
-    return {"month": month or month_key(), "occupied_tokens": test_tokens + sum(max(task.reserved_tokens, task.charged_tokens) if task.status in ACTIVE else task.charged_tokens for task in tasks), "accounted_tokens": test_tokens + sum(task.charged_tokens for task in tasks), "reserved_tokens": sum(max(0, task.reserved_tokens - task.charged_tokens) for task in tasks if task.status in ACTIVE), "unknown_tasks": sum(task.usage_unknown for task in tasks), "task_count": len(tasks), "connection_test_calls": sum(call.stage in {"connection", "capability"} for call in tests)}
+    reserved = sum(call_tokens(call) for call in tests if call.status == "reserved")
+    test_tokens = sum(call_tokens(call) for call in tests if call.status != "reserved")
+    return {"month": month or month_key(), "occupied_tokens": reserved + test_tokens + sum(max(task.reserved_tokens, task.charged_tokens) if task.status in ACTIVE else task.charged_tokens for task in tasks), "accounted_tokens": test_tokens + sum(task.charged_tokens for task in tasks), "reserved_tokens": reserved + sum(max(0, task.reserved_tokens - task.charged_tokens) for task in tasks if task.status in ACTIVE), "unknown_tasks": sum(task.usage_unknown for task in tasks), "task_count": len(tasks), "connection_test_calls": sum(call.stage in {"connection", "capability"} for call in tests), "search_query_calls": sum(call.stage == "search_query" and call.status != "reserved" for call in tests), "unknown_calls": sum(call.status in {"started", "unknown"} or call.status == "completed" and (call.input_tokens is None or call.output_tokens is None) for call in tests)}
 
 
 def call_tokens(call):

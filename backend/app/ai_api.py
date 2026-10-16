@@ -10,6 +10,7 @@ from . import ai_service as service
 from . import reading_service as reading
 from . import services as management
 from . import ai_preview
+from .discovery_models import SearchQueryTask
 
 
 def cancel_task(db, task):
@@ -19,7 +20,7 @@ def cancel_task(db, task):
     task.usage_unknown = any(call.status in {"started", "unknown"} or (call.status == "completed" and (call.input_tokens is None or call.output_tokens is None)) for call in calls)
 
 
-def build_ai_router(database, require_user, lock, settings, runner):
+def build_ai_router(database, require_user, lock, settings, runner, query_assistant=None):
     router = APIRouter(prefix="/api/v1")
 
     @router.get("/settings/model")
@@ -48,6 +49,9 @@ def build_ai_router(database, require_user, lock, settings, runner):
             if not payload.enabled:
                 for task in db.scalars(select(GenerationTask).where(GenerationTask.workspace_id == user.workspace_id, GenerationTask.status.in_(service.ACTIVE))):
                     cancel_task(db, task)
+                if query_assistant:
+                    for task in db.scalars(select(SearchQueryTask).where(SearchQueryTask.workspace_id == user.workspace_id, SearchQueryTask.status.in_({"queued", "running"}))):
+                        query_assistant.cancel(db, task, commit=False)
             db.commit()
             return service.config_view(config)
 

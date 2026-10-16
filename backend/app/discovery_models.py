@@ -83,3 +83,23 @@ class LiteratureSourceSyncTask(Base):
     error: Mapped[str] = mapped_column(default="")
     created_at: Mapped[int] = mapped_column(BigInteger, default=now)
     finished_at: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+
+
+class SearchQueryTask(Base):
+    __tablename__ = "search_query_tasks"
+    __table_args__ = (UniqueConstraint("workspace_id", "user_id", "request_id", name="uq_search_query_request"),)
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=lambda: uuid.uuid4().hex)
+    workspace_id: Mapped[int] = mapped_column(ForeignKey("workspaces.id"))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    request_id: Mapped[str] = mapped_column(String(32))
+    provider: Mapped[str] = mapped_column(String(20))
+    text: Mapped[str] = mapped_column(String(2000))
+    reference_date: Mapped[str] = mapped_column(String(10))
+    config_id: Mapped[str] = mapped_column(ForeignKey("model_configurations.id"))
+    call_id: Mapped[str | None] = mapped_column(ForeignKey("model_calls.id", ondelete="SET NULL"), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="queued", index=True)
+    result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    error_code: Mapped[str] = mapped_column(String(40), default="")
+    error: Mapped[str] = mapped_column(default="")
+    created_at: Mapped[int] = mapped_column(BigInteger, default=now)
+    finished_at: Mapped[int | None] = mapped_column(BigInteger, nullable=True)

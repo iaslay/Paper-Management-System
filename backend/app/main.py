@@ -39,6 +39,8 @@ from .discussion import build_discussion_router
 from .discovery_service import DiscoveryService, own_candidate, attach_candidate
 from .discovery_api import build_discovery_router
 from .pdf_ingest import ingest_file
+from .query_assistant import QueryAssistant, build_query_router
+from .discovery_models import SearchQueryTask
 
 COOKIE = "paperboard_session"
 PASSWORDS = PasswordHasher(time_cost=2, memory_cost=19456, parallelism=1)
@@ -52,6 +54,7 @@ def create_app(settings=None):
     card_runner = CardRunner(factory, write_lock, settings)
     translation_service = TranslationService(settings)
     discovery_service = DiscoveryService(factory, write_lock, settings)
+    query_assistant = QueryAssistant(factory, write_lock, settings, card_runner)
 
     def cleanup():
         with write_lock, factory() as db:
@@ -63,7 +66,8 @@ def create_app(settings=None):
             db.execute(delete(LoginAttempt).where(LoginAttempt.created_at < now() - 600))
             db.execute(delete(ReadingMutationReceipt).where(ReadingMutationReceipt.created_at < now() - 30 * 86400))
             db.execute(delete(ai.GenerationTask).where(ai.GenerationTask.status.not_in(ai.ACTIVE), ai.GenerationTask.finished_at < now() - 30 * 86400))
-            db.execute(delete(ModelCall).where(ModelCall.task_id.is_(None), ModelCall.budget_month != ai.month_key(), ModelCall.created_at < now() - 31 * 86400))
+            db.execute(delete(ModelCall).where(ModelCall.task_id.is_(None), ModelCall.status.not_in({"reserved", "started"}), ModelCall.budget_month != ai.month_key(), ModelCall.created_at < now() - 31 * 86400))
+            db.execute(delete(SearchQueryTask).where(SearchQueryTask.status.not_in({"queued", "running"}), SearchQueryTask.created_at < now() - 30 * 86400))
             db.commit()
             with suppress(OSError):
                 reading.remove_unreferenced_files(db, settings.data_dir, hashes)
@@ -91,7 +95,12 @@ def create_app(settings=None):
         task = asyncio.create_task(periodic_cleanup())
         card_task = asyncio.create_task(card_runner.run()) if settings.ai_worker_enabled else None
         discovery_task = asyncio.create_task(discovery_service.run()) if settings.discovery_worker_enabled else None
+        query_task = asyncio.create_task(query_assistant.run()) if settings.ai_worker_enabled else None
         yield
+        if query_task is not None:
+            query_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await query_task
         if discovery_task is not None:
             discovery_service.stop.set()
             discovery_task.cancel()
@@ -107,10 +116,11 @@ def create_app(settings=None):
         await translation_service.close()
         engine.dispose()
 
-    app = FastAPI(title="研读 · 论文看板", version="0.5.0", lifespan=lifespan, docs_url=None, redoc_url=None)
+    app = FastAPI(title="研读 · 论文看板", version="0.6.0", lifespan=lifespan, docs_url=None, redoc_url=None)
     app.state.card_runner = card_runner
     app.state.translation_service = translation_service
     app.state.discovery_service = discovery_service
+    app.state.query_assistant = query_assistant
     app.state.settings = settings
     app.state.session_factory = factory
     app.state.engine = engine
@@ -173,10 +183,11 @@ def create_app(settings=None):
         return user
 
     app.include_router(build_reading_router(database, require_user, write_lock, settings))
-    app.include_router(build_ai_router(database, require_user, write_lock, settings, card_runner))
+    app.include_router(build_ai_router(database, require_user, write_lock, settings, card_runner, query_assistant))
     app.include_router(build_translation_router(database, require_user, translation_service))
     app.include_router(build_discussion_router(database, require_user, write_lock, settings))
     app.include_router(build_discovery_router(database, require_user, write_lock, discovery_service))
+    app.include_router(build_query_router(database, require_user, query_assistant))
 
     def user_view(db, user):
         workspace = db.get(Workspace, user.workspace_id)
@@ -193,7 +204,7 @@ def create_app(settings=None):
 
     @app.get("/api/v1/health")
     def health():
-        return {"status": "ok", "stage": "discovery", "version": "0.5.0"}
+        return {"status": "ok", "stage": "discovery", "version": "0.6.0"}
 
     @app.get("/api/v1/status")
     def status(request: Request, db=Depends(database)):
